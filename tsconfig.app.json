@@ -10,7 +10,9 @@
     ],
     "module": "ESNext",
     "types": [
-      "vite/client"
+      "vite/client",
+      "google.maps",
+      "file-saver"
     ],
     "skipLibCheck": true,
     /* Bundler mode */
