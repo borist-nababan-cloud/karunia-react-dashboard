@@ -9,15 +9,18 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Copy source code
+# Copy source code and configuration files
 COPY . .
 
 # Build the application
-# Note: VITE_ env vars are typically baked in at build time.
-# In Coolify, you can often inject them during the build phase if using Nixpacks,
-# but for Dockerfile builds, we typically rely on build args or runtime injection if using a specific entrypoint.
-# For simplicity in this static build, we assume env vars are provided during build or loaded explicitly.
+# Note: VITE_ env vars are baked in at build time.
+# In Coolify, these should be provided as build environment variables.
 RUN npm run build
+
+# Verify the build output
+RUN ls -la /app/dist && \
+    ls -la /app/dist/assets && \
+    test -f /app/dist/index.html || (echo "Build failed: index.html not found" && exit 1)
 
 # Stage 2: Serve the application with Nginx
 FROM nginx:alpine
@@ -30,6 +33,10 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Verify files were copied
+RUN ls -la /usr/share/nginx/html && \
+    ls -la /usr/share/nginx/html/assets
 
 # Expose port 80
 EXPOSE 80
