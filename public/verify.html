@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vite Build Verification</title>
+</head>
+<body>
+    <h1>Vite Build Check</h1>
+    <p>If you see this, the Nixpacks deployment is working!</p>
+    <p>Check the page source to verify it's Vite (not Next.js)</p>
+    <script>
+        // Vite builds will have /assets/ references
+        console.log('Build check:', document.querySelector('script[src*="/assets/"]') ? 'VITE BUILD - OK' : 'NOT VITE');
+    </script>
+</body>
+</html>
