@@ -24,7 +24,7 @@ dist-ssr
 *.sw?
 
 # Security & Documentation
-docs/
+# docs/
 .env
 *.env
 *.sql
