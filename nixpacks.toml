@@ -1,0 +1,12 @@
+[phases.build]
+cmds = ["npm run build"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[start]
+cmd = "npx serve -s dist -l 80"
+
+[variables]
+NODE_VERSION = "20"
+NPM_CONFIG_PRODUCTION = "false"
