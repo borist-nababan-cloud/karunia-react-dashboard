@@ -113,7 +113,6 @@ export default function SalesMonitoringPage() {
   const initMap = useCallback(() => {
     // Prevent duplicate initialization using ref instead of state
     if (mapInitRef.current) {
-      console.log('[SalesMonitoring] Map already initialized, skipping...');
       return;
     }
 
@@ -130,8 +129,6 @@ export default function SalesMonitoringPage() {
       return;
     }
 
-    console.log('[SalesMonitoring] Initializing Google Maps...');
-
     try {
       const mapInstance = new window.google.maps.Map(mapContainer, {
         zoom: 11,
@@ -141,7 +138,6 @@ export default function SalesMonitoringPage() {
         fullscreenControl: true,
       });
 
-      console.log('[SalesMonitoring] Google Maps initialized successfully');
       setMap(mapInstance);
       setMapInitialized(true);
       mapInitRef.current = true;
@@ -278,7 +274,6 @@ export default function SalesMonitoringPage() {
     console.log('[SalesMonitoring] Loading Google Maps API...');
     GoogleMapsLoader.load(GOOGLE_MAPS_API_KEY)
       .then(() => {
-        console.log('[SalesMonitoring] Google Maps API loaded, waiting for DOM...');
         // Try to initialize map with retries
         let retries = 0;
         const maxRetries = 20; // Try for up to 10 seconds (20 * 500ms)
@@ -286,11 +281,9 @@ export default function SalesMonitoringPage() {
         const tryInitMap = () => {
           const mapContainer = document.getElementById(MAP_CONTAINER_ID);
           if (mapContainer) {
-            console.log('[SalesMonitoring] Map container found! Initializing...');
             initMap();
           } else if (retries < maxRetries) {
             retries++;
-            console.log(`[SalesMonitoring] Map container not found, retry ${retries}/${maxRetries}...`);
             setTimeout(tryInitMap, 500);
           } else {
             console.error('[SalesMonitoring] Failed to find map container after', maxRetries, 'retries');
@@ -308,7 +301,6 @@ export default function SalesMonitoringPage() {
 
   // Load Google Maps after component is mounted and DOM is ready
   useLayoutEffect(() => {
-    console.log('[SalesMonitoring] Component mounted, loading Google Maps...');
     loadGoogleMaps();
   }, [loadGoogleMaps]);
 

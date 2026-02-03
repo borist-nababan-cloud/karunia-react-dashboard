@@ -10,6 +10,10 @@ import { Toaster } from 'sonner'
 import theme from './theme/theme'
 import { ThemeProvider, CssBaseline } from '@mui/material'
 
+// Set document title from env
+const appName = import.meta.env.VITE_APP_NAME || 'Karunia Motor';
+document.title = appName;
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
