@@ -22,11 +22,20 @@ RUN ls -la /app/dist && \
     ls -la /app/dist/assets && \
     test -f /app/dist/index.html || (echo "Build failed: index.html not found" && exit 1)
 
+# CRITICAL: Verify this is NOT a Next.js build
+# Fail the build if index.html contains Next.js references
+RUN ! grep -q "_next" /app/dist/index.html || (echo "ERROR: Next.js build detected! This should be a Vite build." && exit 1)
+
+# Verify it IS a Vite build (contains /assets/ references)
+RUN grep -q "/assets/" /app/dist/index.html || (echo "ERROR: Vite build structure not found in index.html" && exit 1)
+
 # Stage 2: Serve the application with Nginx
 FROM nginx:alpine
 
-# Remove default nginx static assets
-RUN rm -rf /usr/share/nginx/html/*
+# Remove default nginx static assets AND any persistent cached data
+RUN rm -rf /usr/share/nginx/html/* && \
+    rm -rf /var/cache/nginx/* && \
+    rm -rf /tmp/*
 
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
@@ -37,6 +46,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Verify files were copied
 RUN ls -la /usr/share/nginx/html && \
     ls -la /usr/share/nginx/html/assets
+
+# Verify index.html is correct in final image
+RUN ! grep -q "_next" /usr/share/nginx/html/index.html || (echo "ERROR: Next.js index.html in final image!" && exit 1)
 
 # Expose port 80
 EXPOSE 80
