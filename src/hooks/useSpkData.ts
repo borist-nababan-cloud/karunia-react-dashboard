@@ -81,10 +81,18 @@ export function useSpkData(initialParams: Partial<SpkPaginationParams> = {}): Us
 
       // Pagination
       const page = params.page || 1;
-      const pageSize = params.pageSize || 25;
-      apiParams['pagination[page]'] = page;
-      apiParams['pagination[pageSize]'] = pageSize;
-      apiParams['pagination[start]'] = (page - 1) * pageSize;
+      let pageSize = params.pageSize || 25;
+
+      if (pageSize === -1) {
+        // Fetch all (or a very large number)
+        pageSize = 10000;
+        apiParams['pagination[page]'] = 1;
+        apiParams['pagination[pageSize]'] = pageSize;
+      } else {
+        apiParams['pagination[page]'] = page;
+        apiParams['pagination[pageSize]'] = pageSize;
+        // apiParams['pagination[start]'] = (page - 1) * pageSize; // remove conflict with page/pageSize
+      }
 
       // Sorting (server-side) - fixed syntax
       const sortField = params.sortField || 'createdAt';
