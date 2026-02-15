@@ -118,7 +118,7 @@ export default function SpkManagementPage() {
     loading,
     error,
     refetch,
-    // pagination, // Not needed for client-side
+    pagination, // Needed for stats
     // setPage,
     // setPageSize,
     // setSort,
@@ -382,7 +382,7 @@ export default function SpkManagementPage() {
     // Client-side mode (default)
     enablePagination: true,
     enableSorting: true,
-    enableFiltering: true,
+    enableGlobalFilter: true,
     state: {
       isLoading: loading,
     },
