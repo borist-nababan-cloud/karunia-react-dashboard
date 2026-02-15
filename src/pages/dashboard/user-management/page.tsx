@@ -74,8 +74,9 @@ export default function UserManagementPage() {
     try {
       setLoading(true);
       const [salesProfilesResponse, supervisorsResponse] = await Promise.all([
-        salesProfilesAPI.find(),
-        supervisorsAPI.find()
+        // Fetch all records using recursive strategy
+        salesProfilesAPI.findAll(),
+        supervisorsAPI.findAll()
       ]);
       setData(salesProfilesResponse.data || []);
       setSupervisors(supervisorsResponse.data || []);

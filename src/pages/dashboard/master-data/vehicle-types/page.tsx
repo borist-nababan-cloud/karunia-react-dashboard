@@ -47,13 +47,6 @@ export default function VehicleTypesPage() {
   const [data, setData] = useState<VehicleType[]>([]);
   const [vehicleGroups, setVehicleGroups] = useState<VehicleGroupData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<PaginationMeta>({
-    page: 1,
-    pageSize: 50,
-    pageCount: 1,
-    total: 0,
-  });
-  const [searchTerm, setSearchTerm] = useState('');
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -63,25 +56,16 @@ export default function VehicleTypesPage() {
     vehicle_group: null,
   });
 
-  const fetchData = useCallback(async (page = 1, pageSize = 50, search = '') => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const [vehicleTypesResponse, vehicleGroupsResponse] = await Promise.all([
-        vehicleTypesAPI.find({
-          'pagination[page]': page,
-          'pagination[pageSize]': pageSize,
-          ...(search && { 'filters[name][$containsi]': search }),
-        }),
-        vehicleGroupsAPI.find(),
+        vehicleTypesAPI.findAll(),
+        vehicleGroupsAPI.findAll(),
       ]);
 
       setData(vehicleTypesResponse.data || []);
       setVehicleGroups(vehicleGroupsResponse.data || []);
-
-      // Update pagination metadata from response
-      if (vehicleTypesResponse.meta?.pagination) {
-        setPagination(vehicleTypesResponse.meta.pagination);
-      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
       toast.error('Failed to load data');
@@ -91,7 +75,7 @@ export default function VehicleTypesPage() {
   }, []); // Empty dependency array - fetchData is stable
 
   useEffect(() => {
-    fetchData(1, 50, '');
+    fetchData();
   }, [fetchData]);
 
   const columns: MRT_ColumnDef<VehicleType>[] = [
@@ -179,7 +163,7 @@ export default function VehicleTypesPage() {
       setIsAddDialogOpen(false);
       setEditingItem(null);
       // Refresh current page data
-      fetchData(pagination.page, pagination.pageSize, searchTerm);
+      fetchData();
     } catch (error) {
       console.error('Failed to save vehicle type:', error);
       toast.error('Failed to save vehicle type');
@@ -195,25 +179,12 @@ export default function VehicleTypesPage() {
       await vehicleTypesAPI.delete(item.documentId);
       toast.success('Vehicle type deleted successfully');
       // Refresh current page data
-      fetchData(pagination.page, pagination.pageSize, searchTerm);
+      fetchData();
     } catch (error) {
       console.error('Failed to delete vehicle type:', error);
       toast.error('Failed to delete vehicle type');
     }
   };
-
-  const handlePageChange = useCallback((page: number) => {
-    fetchData(page, pagination.pageSize, searchTerm);
-  }, [fetchData, pagination.pageSize, searchTerm]);
-
-  const handlePageSizeChange = useCallback((pageSize: number) => {
-    fetchData(1, pageSize, searchTerm); // Reset to page 1 when changing page size
-  }, [fetchData, searchTerm]);
-
-  const handleSearchChange = useCallback((search: string) => {
-    setSearchTerm(search);
-    fetchData(1, pagination.pageSize, search); // Reset to page 1 when searching
-  }, [fetchData, pagination.pageSize]);
 
   const vehicleGroupOptions = vehicleGroups.map((group) => ({
     label: group.name,
@@ -234,10 +205,6 @@ export default function VehicleTypesPage() {
             onDelete={handleDelete}
             searchPlaceholder="Search vehicle types by name..."
             addButtonText="Add Vehicle Type"
-            pagination={pagination}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-            onSearchChange={handleSearchChange}
             isLoading={loading}
           />
 

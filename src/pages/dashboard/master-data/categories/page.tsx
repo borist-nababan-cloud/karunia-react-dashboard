@@ -46,13 +46,6 @@ interface PaginationMeta {
 export default function CategoriesPage() {
   const [data, setData] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<PaginationMeta>({
-    page: 1,
-    pageSize: 50,
-    pageCount: 1,
-    total: 0,
-  });
-  const [searchTerm, setSearchTerm] = useState('');
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -64,20 +57,11 @@ export default function CategoriesPage() {
   });
 
   // Fetch data from API
-  const fetchData = async (page = 1, pageSize = 50, search = '') => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await categoriesAPI.find({
-        'pagination[page]': page,
-        'pagination[pageSize]': pageSize,
-        ...(search && { 'filters[name][$containsi]': search }),
-      });
+      const response = await categoriesAPI.findAll();
       setData(response.data || []);
-
-      // Update pagination metadata from response
-      if (response.meta?.pagination) {
-        setPagination(response.meta.pagination);
-      }
     } catch (error) {
       console.error('Failed to fetch categories:', error);
       toast.error('Failed to load categories');
@@ -87,7 +71,7 @@ export default function CategoriesPage() {
   };
 
   useEffect(() => {
-    fetchData(1, 50, '');
+    fetchData();
   }, []);
 
   const columns: MRT_ColumnDef<Category>[] = [
@@ -156,7 +140,7 @@ export default function CategoriesPage() {
       try {
         await categoriesAPI.delete(item.documentId);
         toast.success('Category deleted successfully');
-        fetchData(pagination.page, pagination.pageSize, searchTerm);
+        fetchData();
       } catch (error) {
         console.error('Failed to delete category:', error);
         toast.error('Failed to delete category');
@@ -191,25 +175,13 @@ export default function CategoriesPage() {
       setIsEditDialogOpen(false);
       setIsAddDialogOpen(false);
       setEditingItem(null);
-      fetchData(pagination.page, pagination.pageSize, searchTerm);
+      fetchData(); // Refetch data
     } catch (error) {
       console.error('Failed to save category:', error);
       toast.error('Failed to save category');
     }
   };
 
-  const handlePageChange = (page: number) => {
-    fetchData(page, pagination.pageSize, searchTerm);
-  };
-
-  const handlePageSizeChange = (pageSize: number) => {
-    fetchData(1, pageSize, searchTerm); // Reset to page 1 when changing page size
-  };
-
-  const handleSearchChange = (search: string) => {
-    setSearchTerm(search);
-    fetchData(1, pagination.pageSize, search); // Reset to page 1 when searching
-  };
 
   return (
     <ProtectedRoute>
@@ -225,10 +197,6 @@ export default function CategoriesPage() {
             onDelete={handleDelete}
             searchPlaceholder="Search categories by name..."
             addButtonText="Add Category"
-            pagination={pagination}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-            onSearchChange={handleSearchChange}
             isLoading={loading}
           />
 

@@ -39,15 +39,7 @@ interface PaginationMeta {
 
 export default function SupervisorsPage() {
   const [data, setData] = useState<Supervisor[]>([]);
-
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<PaginationMeta>({
-    page: 1,
-    pageSize: 50,
-    pageCount: 1,
-    total: 0,
-  });
-  const [searchTerm, setSearchTerm] = useState('');
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -57,21 +49,11 @@ export default function SupervisorsPage() {
   });
 
   // Fetch data from API
-  const fetchData = async (page = 1, pageSize = 50, search = '') => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const supervisorsResponse = await supervisorsAPI.find({
-        'pagination[page]': page,
-        'pagination[pageSize]': pageSize,
-        ...(search && { 'filters[namasupervisor][$containsi]': search }),
-      });
+      const supervisorsResponse = await supervisorsAPI.findAll();
       setData(supervisorsResponse.data || []);
-
-
-      // Update pagination metadata from response
-      if (supervisorsResponse.meta?.pagination) {
-        setPagination(supervisorsResponse.meta.pagination);
-      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
       toast.error('Failed to load supervisors');
@@ -81,7 +63,7 @@ export default function SupervisorsPage() {
   };
 
   useEffect(() => {
-    fetchData(1, 50, '');
+    fetchData();
   }, []);
 
   const columns: MRT_ColumnDef<Supervisor>[] = [
@@ -145,7 +127,7 @@ export default function SupervisorsPage() {
       setIsEditDialogOpen(false);
       setIsAddDialogOpen(false);
       setEditingItem(null);
-      fetchData(pagination.page, pagination.pageSize, searchTerm); // Refetch data
+      fetchData(); // Refetch data
     } catch (error) {
       console.error('Failed to save supervisor:', error);
       toast.error('Failed to save supervisor');
@@ -160,25 +142,13 @@ export default function SupervisorsPage() {
     try {
       await supervisorsAPI.delete(item.documentId);
       toast.success('Supervisor deleted successfully');
-      fetchData(pagination.page, pagination.pageSize, searchTerm);
+      fetchData();
     } catch (error) {
       console.error('Failed to delete supervisor:', error);
       toast.error('Failed to delete supervisor');
     }
   };
 
-  const handlePageChange = (page: number) => {
-    fetchData(page, pagination.pageSize, searchTerm);
-  };
-
-  const handlePageSizeChange = (pageSize: number) => {
-    fetchData(1, pageSize, searchTerm); // Reset to page 1 when changing page size
-  };
-
-  const handleSearchChange = (search: string) => {
-    setSearchTerm(search);
-    fetchData(1, pagination.pageSize, search); // Reset to page 1 when searching
-  };
 
   return (
     <ProtectedRoute>
@@ -194,10 +164,6 @@ export default function SupervisorsPage() {
             onDelete={handleDelete}
             searchPlaceholder="Search supervisors by name..."
             addButtonText="Add Supervisor"
-            pagination={pagination}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-            onSearchChange={handleSearchChange}
             isLoading={loading}
           />
 

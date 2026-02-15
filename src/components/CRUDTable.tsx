@@ -64,28 +64,33 @@ export const CRUDTable = <TData extends Record<string, any>>({
       }),
     },
     manualPagination: !!pagination,
-    onPaginationChange: (updater) => {
-      if (!onPageChange || !onPageSizeChange || !pagination) return;
-      const newPagination = typeof updater === 'function'
-        ? updater({
-          pageIndex: pagination.page - 1,
-          pageSize: pagination.pageSize,
-        })
-        : updater;
+    // Only provide onPaginationChange if we are controlling pagination
+    ...(pagination && onPageChange && onPageSizeChange ? {
+      onPaginationChange: (updater) => {
+        const newPagination = typeof updater === 'function'
+          ? updater({
+            pageIndex: pagination.page - 1,
+            pageSize: pagination.pageSize,
+          })
+          : updater;
 
-      if (newPagination.pageSize !== pagination.pageSize) {
-        onPageSizeChange(newPagination.pageSize);
-      }
-      if (newPagination.pageIndex !== pagination.page - 1) {
-        onPageChange(newPagination.pageIndex + 1);
-      }
-    },
+        if (newPagination.pageSize !== pagination.pageSize) {
+          onPageSizeChange(newPagination.pageSize);
+        }
+        if (newPagination.pageIndex !== pagination.page - 1) {
+          onPageChange(newPagination.pageIndex + 1);
+        }
+      },
+    } : {}),
     manualFiltering: !!onSearchChange,
-    onGlobalFilterChange: (updater) => {
-      if (onSearchChange && typeof updater === 'string') {
-        onSearchChange(updater);
-      }
-    },
+    // Only provide onGlobalFilterChange if we are controlling search
+    ...(onSearchChange ? {
+      onGlobalFilterChange: (updater) => {
+        if (typeof updater === 'string') {
+          onSearchChange(updater);
+        }
+      },
+    } : {}),
     enableRowActions: !!onEdit || !!onDelete,
     positionActionsColumn: 'last',
     renderRowActions: ({ row }) => (

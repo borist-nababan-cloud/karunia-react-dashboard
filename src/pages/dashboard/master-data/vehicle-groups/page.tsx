@@ -41,13 +41,6 @@ export default function VehicleGroupsPage() {
   const [data, setData] = useState<VehicleGroup[]>([]);
 
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<PaginationMeta>({
-    page: 1,
-    pageSize: 50,
-    pageCount: 1,
-    total: 0,
-  });
-  const [searchTerm, setSearchTerm] = useState('');
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -57,26 +50,15 @@ export default function VehicleGroupsPage() {
   });
 
   // Fetch data from API
-  const fetchData = async (page = 1, pageSize = 50, search = '') => {
+  const fetchData = async () => {
     try {
       setLoading(true);
 
-      const vehicleGroupsResponse = await vehicleGroupsAPI.find({
-        'pagination[page]': page,
-        'pagination[pageSize]': pageSize,
-        ...(search && { 'filters[name][$containsi]': search }),
-      });
+      const vehicleGroupsResponse = await vehicleGroupsAPI.findAll();
 
       const vehicleGroupsData = vehicleGroupsResponse.data || [];
 
-
       setData(vehicleGroupsData);
-
-
-      // Update pagination metadata from response
-      if (vehicleGroupsResponse.meta?.pagination) {
-        setPagination(vehicleGroupsResponse.meta.pagination);
-      }
     } catch (error) {
       console.error('Failed to load vehicle groups:', error);
       toast.error('Failed to load vehicle groups');
@@ -86,7 +68,7 @@ export default function VehicleGroupsPage() {
   };
 
   useEffect(() => {
-    fetchData(1, 50, '');
+    fetchData();
   }, []);
 
   const columns: MRT_ColumnDef<VehicleGroup>[] = [
@@ -150,7 +132,7 @@ export default function VehicleGroupsPage() {
       setIsEditDialogOpen(false);
       setIsAddDialogOpen(false);
       setEditingItem(null);
-      fetchData(pagination.page, pagination.pageSize, searchTerm); // Refetch data
+      fetchData(); // Refetch data
     } catch (error) {
       console.error('Failed to save vehicle group:', error);
       toast.error('Failed to save vehicle group');
@@ -165,25 +147,13 @@ export default function VehicleGroupsPage() {
     try {
       await vehicleGroupsAPI.delete(item.documentId);
       toast.success('Vehicle group deleted successfully');
-      fetchData(pagination.page, pagination.pageSize, searchTerm);
+      fetchData();
     } catch (error) {
       console.error('Failed to delete vehicle group:', error);
       toast.error('Failed to delete vehicle group');
     }
   };
 
-  const handlePageChange = (page: number) => {
-    fetchData(page, pagination.pageSize, searchTerm);
-  };
-
-  const handlePageSizeChange = (pageSize: number) => {
-    fetchData(1, pageSize, searchTerm); // Reset to page 1 when changing page size
-  };
-
-  const handleSearchChange = (search: string) => {
-    setSearchTerm(search);
-    fetchData(1, pagination.pageSize, search); // Reset to page 1 when searching
-  };
 
   return (
     <ProtectedRoute>
@@ -199,10 +169,6 @@ export default function VehicleGroupsPage() {
             onDelete={handleDelete}
             searchPlaceholder="Search vehicle groups by name..."
             addButtonText="Add Vehicle Group"
-            pagination={pagination}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-            onSearchChange={handleSearchChange}
             isLoading={loading}
           />
 

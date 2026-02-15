@@ -290,6 +290,73 @@ export const createCRUDAPI = (endpoint: string) => ({
             throw error;
         }
     },
+
+    // Recursively fetch all records
+    findAll: async (filters = {}) => {
+        try {
+            // First request to get metadata and first page
+            const firstPageResponse = await api.get(`/${endpoint}`, {
+                params: {
+                    populate: '*',
+                    'pagination[pageSize]': 100, // Safe limit per request
+                    'pagination[page]': 1,
+                    ...filters,
+                },
+            });
+
+            const meta = firstPageResponse.data.meta;
+            const pageCount = meta?.pagination?.pageCount || 1;
+            let allData = firstPageResponse.data.data || [];
+
+            // If more pages exist, fetch them in parallel
+            if (pageCount > 1) {
+                const updatedFilters = { ...filters };
+                const promises = [];
+
+                for (let page = 2; page <= pageCount; page++) {
+                    promises.push(
+                        api.get(`/${endpoint}`, {
+                            params: {
+                                populate: '*',
+                                'pagination[pageSize]': 100,
+                                'pagination[page]': page,
+                                ...updatedFilters,
+                            },
+                        })
+                    );
+                }
+
+                const responses = await Promise.all(promises);
+                responses.forEach(response => {
+                    const pageData = response.data.data || [];
+                    allData = [...allData, ...pageData];
+                });
+            }
+
+            return {
+                data: allData,
+                meta: {
+                    ...meta,
+                    pagination: {
+                        ...meta.pagination,
+                        page: 1,
+                        pageSize: allData.length,
+                        pageCount: 1,
+                        total: allData.length
+                    }
+                }
+            };
+
+        } catch (error: any) {
+            console.error(`[CRUD] ${endpoint}.findAll ERROR:`, {
+                message: error.message,
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data
+            });
+            throw error;
+        }
+    },
 });
 
 // Specific API endpoints
