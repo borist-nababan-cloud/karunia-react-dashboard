@@ -271,7 +271,7 @@ export default function SalesMonitoringPage() {
       return;
     }
 
-    console.log('[SalesMonitoring] Loading Google Maps API...');
+
     GoogleMapsLoader.load(GOOGLE_MAPS_API_KEY)
       .then(() => {
         // Try to initialize map with retries
