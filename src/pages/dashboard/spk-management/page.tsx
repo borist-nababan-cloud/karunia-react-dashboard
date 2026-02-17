@@ -374,6 +374,10 @@ export default function SpkManagementPage() {
         </Box>
       ),
     },
+    {
+      accessorKey: 'createdAt',
+      header: 'Created At',
+    },
   ], []);
 
   const table = useMaterialReactTable({
@@ -389,6 +393,7 @@ export default function SpkManagementPage() {
     initialState: {
       pagination: { pageSize: 10, pageIndex: 0 },
       sorting: [{ id: 'createdAt', desc: true }],
+      columnVisibility: { createdAt: false }, // Hide by default
     },
     muiTablePaperProps: {
       elevation: 0,
