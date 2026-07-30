@@ -4,7 +4,6 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 // Lazy load pages
 const LandingPage = React.lazy(() => import('./pages/page'));
 const LoginPage = React.lazy(() => import('./pages/auth/login/page'));
-const RegisterPage = React.lazy(() => import('./pages/auth/register/page'));
 
 // Dashboard Pages
 const DashboardPage = React.lazy(() => import('./pages/dashboard/page'));
@@ -35,7 +34,6 @@ function App() {
 
         {/* Auth Routes */}
         <Route path="/auth/login" element={<LoginPage />} />
-        <Route path="/auth/register" element={<RegisterPage />} />
 
         {/* Dashboard Routes */}
         <Route path="/dashboard" element={<DashboardPage />} />

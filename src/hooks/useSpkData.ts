@@ -45,7 +45,7 @@ interface UseSpkDataResult {
   setSort: (field: string, order: 'asc' | 'desc') => void;
   setFilter: (field: string, value: string) => void;
   setDateRange: (startDate: string, endDate: string) => void;
-  updateSpk: (id: string, data: any) => Promise<void>;
+  updateSpk: (id: string | number, data: any) => Promise<void>;
   isUpdating: boolean;
 }
 
@@ -126,15 +126,15 @@ export function useSpkData(initialParams: Partial<SpkPaginationParams> = {}): Us
   // Extract data and pagination info
   const spks = data?.data || [];
   const pagination = {
-    page: data?.meta?.pagination?.page || params.page || 1,
-    pageSize: data?.meta?.pagination?.pageSize || params.pageSize || 25,
-    pageCount: data?.meta?.pagination?.pageCount || 1,
-    total: data?.meta?.pagination?.total || 0,
+    page: (data as any)?.meta?.pagination?.page || params.page || 1,
+    pageSize: (data as any)?.meta?.pagination?.pageSize || params.pageSize || 25,
+    pageCount: (data as any)?.meta?.pagination?.pageCount || 1,
+    total: (data as any)?.meta?.pagination?.total || spks.length,
   };
 
   // Update SPK mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ id, updateData }: { id: string; updateData: any }) => {
+    mutationFn: async ({ id, updateData }: { id: string | number; updateData: any }) => {
       return await spkAPI.update(id, updateData);
     },
     onSuccess: () => {
@@ -169,7 +169,7 @@ export function useSpkData(initialParams: Partial<SpkPaginationParams> = {}): Us
     setParams(prev => ({ ...prev, startDate, endDate, page: 1 })); // Reset to first page when changing date range
   }, []);
 
-  const updateSpk = async (id: string, updateData: any) => {
+  const updateSpk = async (id: string | number, updateData: any) => {
     await updateMutation.mutateAsync({ id, updateData });
   };
 

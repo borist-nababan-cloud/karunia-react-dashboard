@@ -18,14 +18,12 @@ import { getImageUrl, getOptimalImageUrl } from '@/utils/imageUtils';
 
 interface Article {
   id: number;
-  documentId: string;
-  title: string;
+    title: string;
   description: string;
   slug: string | null;
   cover?: {
     id: number;
-    documentId: string;
-    name: string;
+        name: string;
     alternativeText?: string;
     caption?: string;
     width: number;
@@ -175,13 +173,13 @@ export default function InformationPage() {
 
     setIsSubmitting(true);
     try {
-      let coverId = null;
+      let coverId: string | number | null = null;
 
       // Upload image if selected
       if (selectedFile) {
         const uploadResponse = await uploadFile(selectedFile);
         if (uploadResponse && uploadResponse.length > 0) {
-          coverId = uploadResponse[0].id;
+          coverId = uploadResponse[0].url; // Use URL for Supabase
         }
       }
 
@@ -233,13 +231,13 @@ export default function InformationPage() {
 
     setIsSubmitting(true);
     try {
-      let coverId = editingArticle.cover?.id || null;
+      let coverId: string | number | null = editingArticle.cover?.id || null;
 
       // Upload new image if selected
       if (selectedFile) {
         const uploadResponse = await uploadFile(selectedFile);
         if (uploadResponse && uploadResponse.length > 0) {
-          coverId = uploadResponse[0].id;
+          coverId = uploadResponse[0].url; // Use URL for Supabase
         }
       }
 
@@ -250,7 +248,7 @@ export default function InformationPage() {
         cover: coverId,
       };
 
-      await articlesAPI.update(editingArticle.documentId, articleData);
+      await articlesAPI.update(editingArticle.id, articleData);
       toast.success('Article updated successfully');
       setIsEditModalOpen(false);
       setEditingArticle(null);

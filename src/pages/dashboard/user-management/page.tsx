@@ -32,8 +32,7 @@ import { toast } from 'sonner';
 
 interface SalesProfile {
   id: number;
-  documentId: string;
-  sales_uid: string;
+    sales_uid: string;
   email: string;
   surename: string;
   address: string;
@@ -52,8 +51,7 @@ interface SalesProfile {
 
 interface Supervisor {
   id: number;
-  documentId: string;
-  namasupervisor: string;
+    namasupervisor: string;
 }
 
 export default function UserManagementPage() {
@@ -140,14 +138,14 @@ export default function UserManagementPage() {
     if (!editingItem) return;
 
     try {
-      await salesProfilesAPI.update(editingItem.documentId, {
+      await salesProfilesAPI.update(editingItem.id, {
         approved: formData.approved,
         blocked: formData.blocked,
         namasupervisor: formData.namasupervisor,
       });
 
       setData(data.map(item =>
-        item.documentId === editingItem.documentId
+        item.id === editingItem.id
           ? { ...item, ...formData }
           : item
       ));
@@ -253,7 +251,7 @@ export default function UserManagementPage() {
                       <SelectContent>
                         <SelectItem value="__none__">No Supervisor</SelectItem>
                         {supervisors.map((supervisor) => (
-                          <SelectItem key={supervisor.documentId} value={supervisor.namasupervisor}>
+                          <SelectItem key={supervisor.id} value={supervisor.namasupervisor}>
                             {supervisor.namasupervisor}
                           </SelectItem>
                         ))}

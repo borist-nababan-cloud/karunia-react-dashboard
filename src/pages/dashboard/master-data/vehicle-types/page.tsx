@@ -22,18 +22,16 @@ import { Combobox } from '@/components/ui/combobox';
 
 interface VehicleType {
   id: number;
-  documentId: string;
-  name: string;
+    name: string;
   createdAt: string;
   updatedAt: string;
   publishedAt: string;
-  vehicle_group: string | null | { documentId: string; name: string };
+  vehicle_group: string | null | {  name: string };
 }
 
 interface VehicleGroupData {
   id: number;
-  documentId: string;
-  name: string;
+    name: string;
 }
 
 interface PaginationMeta {
@@ -151,7 +149,7 @@ export default function VehicleTypesPage() {
 
       if (editingItem) {
         await vehicleTypesAPI.update(
-          editingItem.documentId,
+          editingItem.id,
           dataToSave
         );
         toast.success('Vehicle type updated successfully');
@@ -176,7 +174,7 @@ export default function VehicleTypesPage() {
     }
 
     try {
-      await vehicleTypesAPI.delete(item.documentId);
+      await vehicleTypesAPI.delete(item.id);
       toast.success('Vehicle type deleted successfully');
       // Refresh current page data
       fetchData();

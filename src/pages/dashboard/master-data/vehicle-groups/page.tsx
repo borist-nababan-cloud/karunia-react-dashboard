@@ -21,8 +21,7 @@ import { toast } from 'sonner';
 
 interface VehicleGroup {
   id: number;
-  documentId: string;
-  name: string;
+    name: string;
   createdAt: string;
   updatedAt: string;
   publishedAt: string;
@@ -120,7 +119,7 @@ export default function VehicleGroupsPage() {
           name: formData.name,
         };
         await vehicleGroupsAPI.update(
-          editingItem.documentId,
+          editingItem.id,
           dataToUpdate
         );
         toast.success('Vehicle group updated successfully');
@@ -145,7 +144,7 @@ export default function VehicleGroupsPage() {
     }
 
     try {
-      await vehicleGroupsAPI.delete(item.documentId);
+      await vehicleGroupsAPI.delete(item.id);
       toast.success('Vehicle group deleted successfully');
       fetchData();
     } catch (error) {

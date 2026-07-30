@@ -3,7 +3,7 @@ import { spkAPI, vehicleTypesAPI, branchesAPI, salesStaffAPI } from '@/services/
 import { StrapiListResponse, SPK, VehicleType, Branch, SalesStaff } from '@/types/strapi';
 
 // Generic hook for fetching data
-export function useApi<T>(apiCall: () => Promise<StrapiListResponse<T>>, deps: any[] = []) {
+export function useApi<T>(apiCall: () => Promise<{ data: T[] }>, deps: any[] = []) {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

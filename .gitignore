@@ -32,3 +32,5 @@ docs/
 *.db
 my-cred/
 database-docs/
+*.md
+!README.md

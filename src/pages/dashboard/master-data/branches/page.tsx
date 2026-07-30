@@ -23,8 +23,7 @@ import { toast } from 'sonner';
 
 interface Branch {
   id: number;
-  documentId: string;
-  name: string;
+    name: string;
   address: string;
   latitude: number;
   longitude: number;
@@ -166,7 +165,7 @@ export default function BranchesPage() {
           longitude: formData.longitude,
         };
         await branchesAPI.update(
-          editingItem.documentId,
+          editingItem.id,
           dataToUpdate
         );
         toast.success('Branch updated successfully');
@@ -190,7 +189,7 @@ export default function BranchesPage() {
     }
 
     try {
-      await branchesAPI.delete(item.documentId);
+      await branchesAPI.delete(item.id);
       toast.success('Branch deleted successfully');
       fetchData();
     } catch (error) {

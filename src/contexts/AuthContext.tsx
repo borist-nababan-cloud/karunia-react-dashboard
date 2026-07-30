@@ -1,26 +1,17 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authAPI } from '../services/api';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 
 interface User {
-    id: number;
+    id: string; // Supabase user id is string (UUID)
     username: string;
     email: string;
-    confirmed: boolean;
-    blocked: boolean;
-    role_custom?: string;  // Custom role field (ADMIN, SALES, etc.)
-    role?: {
-        id: number;
-        name: string;
-        description: string;
-        type: string;
-    };
+    role_custom?: string;
 }
 
 interface AuthContextType {
     user: User | null;
     login: (email: string, password: string) => Promise<void>;
-    register: (username: string, email: string, password: string) => Promise<void>;
     logout: () => void;
     isLoading: boolean;
     error: string | null;
@@ -34,141 +25,182 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        // Check for stored user session on mount
-        const checkAuth = async () => {
-            try {
-                const token = localStorage.getItem('jwt_token');
-                const storedUser = localStorage.getItem('user');
+    const handleUserSession = useCallback(async (authUser: any) => {
+        try {
+            const { data: profile, error } = await supabase
+                .from('user_profiles')
+                .select('*, user_roles(role_name)')
+                .eq('id', authUser.id)
+                .single();
 
-                if (token && storedUser) {
-                    // Verify token is still valid with timeout
-                    const userData = await Promise.race([
-                        authAPI.me(),
-                        new Promise((_, reject) =>
-                            setTimeout(() => reject(new Error('Auth check timeout')), 10000)
-                        ),
-                    ]) as any;
-
-                    // ROLE-BASED ACCESS CONTROL CHECK
-                    if (!userData.role_custom || userData.role_custom !== 'ADMIN') {
-                        // Show toast notification for session termination
-                        toast.error('Session Terminated: Your account does not have administrative privileges. Access denied.', {
-                            duration: 5000,
-                            position: 'top-center'
-                        });
-
-                        // Clear unauthorized session
-                        localStorage.removeItem('jwt_token');
-                        localStorage.removeItem('user');
-
-                        throw new Error('Access denied. Your session has been terminated.');
-                    }
-
-                    setUser(userData);
+            if (error || !profile) {
+                // Securely ensure the profile exists via RPC (bypasses RLS issues)
+                const { data: rpcData, error: rpcError } = await supabase.rpc('ensure_user_profile');
+                
+                // Handle new JSON response format from backend RPC
+                if (rpcError || (rpcData && (rpcData as any).success === false)) {
+                    console.error('Failed to auto-insert profile via RPC:', rpcError || (rpcData as any).error);
                 }
-            } catch (error) {
-                console.error('Auth check failed:', error);
-                // Clear invalid session
-                localStorage.removeItem('jwt_token');
-                localStorage.removeItem('user');
-                // Always clear loading state, even on error
-                setIsLoading(false);
-            } finally {
-                // Always clear loading state
+
+                toast.error('Your profile has been registered. Please wait for an administrator to verify your identity.', { duration: 6000 });
+                await supabase.auth.signOut();
+                setUser(null);
+                return;
+            }
+
+            if (profile.blocked) {
+                toast.error('Access Denied: Your account has been blocked.');
+                await supabase.auth.signOut();
+                setUser(null);
+                return;
+            }
+
+            const roleName = profile.user_roles?.role_name;
+
+            if (roleName !== 'ADMIN') {
+                toast.error('Session Terminated: Your account does not have administrative privileges.', { duration: 5000 });
+                await supabase.auth.signOut();
+                setUser(null);
+                return;
+            }
+
+            const mappedUser: User = {
+                id: authUser.id,
+                email: authUser.email || '',
+                username: profile.username || authUser.user_metadata?.username || 'User',
+                role_custom: roleName,
+            };
+            
+            setUser(mappedUser);
+        } catch (error) {
+            console.error('Error handling session:', error);
+            setUser(null);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        const getSession = async () => {
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) throw error;
+
+                if (session?.user) {
+                    await handleUserSession(session.user);
+                } else {
+                    setUser(null);
+                    setIsLoading(false);
+                }
+            } catch (err) {
+                console.error('Session check failed:', err);
+                setUser(null);
                 setIsLoading(false);
             }
         };
 
-        checkAuth();
-    }, []);
+        getSession();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'SIGNED_OUT') {
+                setUser(null);
+                setIsLoading(false);
+                return;
+            }
+
+            if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED')) {
+                // If user state is already set and matching, skip re-fetching to save DB calls, unless forced
+                if (user && user.id === session.user.id) {
+                    setIsLoading(false);
+                    return;
+                }
+                
+                await handleUserSession(session.user);
+            } else if (!session) {
+                setUser(null);
+                setIsLoading(false);
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, [handleUserSession, user]);
 
     const login = async (email: string, password: string) => {
         try {
             setError(null);
             setIsLoading(true);
 
-            const response = await authAPI.login(email, password);
-
-            // Handle different response formats
-            let token, user;
-
-            if (response.jwt) {
-                token = response.jwt;
-                user = response.user;
-            } else if (response.data?.token) {
-                token = response.data.token;
-                user = response.data.user;
-            } else if (response.token) {
-                token = response.token;
-                user = response.user;
-            } else {
-                console.error('Unexpected response format - no token found');
-                throw new Error('Invalid response format from server - no authentication token found');
-            }
-
-            // ROLE-BASED ACCESS CONTROL CHECK
-            if (!user.role_custom || user.role_custom !== 'ADMIN') {
-                // Show toast notification for access denied
-                toast.error('Access Denied: Only administrators can access this dashboard. Please contact your system administrator.', {
-                    duration: 5000,
-                    position: 'top-center'
-                });
-
-                throw new Error('Access denied. Only administrators can access this dashboard. Please contact your system administrator.');
-            }
-
-            // Store JWT token
-            localStorage.setItem('jwt_token', token);
-            localStorage.setItem('user', JSON.stringify(user));
-
-            setUser(user);
-
-            // Show success notification
-            toast.success(`Welcome back, ${user.username || 'Administrator'}!`, {
-                duration: 3000,
-                position: 'top-center'
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
             });
 
+            if (error) throw error;
+
+            // Fix: Wait for the session JWT to be fully established and available
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            
+            if (sessionError || !session) {
+                await supabase.auth.signOut();
+                throw new Error('Authentication failed: Could not establish session.');
+            }
+
+            // Instead of trusting metadata, fetch the profile using the valid session
+            const { data: profile, error: profileError } = await supabase
+                .from('user_profiles')
+                .select('*, user_roles(role_name)')
+                .eq('id', session.user.id)
+                .single();
+
+            if (profileError || !profile) {
+                // Securely ensure the profile exists via RPC (bypasses RLS issues)
+                const { data: rpcData, error: rpcError } = await supabase.rpc('ensure_user_profile');
+
+                if (rpcError || (rpcData && (rpcData as any).success === false)) {
+                    console.error('Failed to auto-insert profile via RPC:', rpcError || (rpcData as any).error);
+                }
+
+                toast.error('Your profile has been registered. Please wait for an administrator to verify your identity.', { duration: 6000 });
+                await supabase.auth.signOut();
+                throw new Error('Profile pending verification.');
+            }
+
+            if (profile.blocked) {
+                toast.error('Access Denied: Your account has been blocked.');
+                await supabase.auth.signOut();
+                throw new Error('Account blocked.');
+            }
+
+            const roleName = profile.user_roles?.role_name;
+
+            if (roleName !== 'ADMIN') {
+                toast.error('Access Denied: Only administrators can access this dashboard.');
+                await supabase.auth.signOut();
+                throw new Error('Access denied.');
+            }
+
+            const mappedUser: User = {
+                id: data.user.id,
+                email: data.user.email || '',
+                username: profile.username || data.user.user_metadata?.username || 'User',
+                role_custom: roleName,
+            };
+
+            setUser(mappedUser);
+            toast.success(`Welcome back!`);
+            
         } catch (error: any) {
             console.error('Login failed:', error);
-
-            // Handle different error formats
-            const errorMessage = error.response?.data?.error?.message ||
-                error.response?.data?.message ||
-                error.message ||
-                'Login failed';
-
-            setError(errorMessage);
+            setError(error.message || 'Login failed');
             throw error;
         } finally {
             setIsLoading(false);
         }
     };
 
-    const register = async (username: string, email: string, password: string) => {
-        try {
-            setError(null);
-            setIsLoading(true);
-
-            const response = await authAPI.register(username, email, password);
-
-            // Auto-login after successful registration
-            localStorage.setItem('jwt_token', response.jwt);
-            localStorage.setItem('user', JSON.stringify(response.user));
-
-            setUser(response.user);
-        } catch (error: any) {
-            setError(error.response?.data?.error?.message || 'Registration failed');
-            throw error;
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const logout = () => {
-        localStorage.removeItem('jwt_token');
-        localStorage.removeItem('user');
+    const logout = async () => {
+        await supabase.auth.signOut();
         setUser(null);
         setError(null);
         window.location.href = '/auth/login';
@@ -177,7 +209,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const value = {
         user,
         login,
-        register,
         logout,
         isLoading,
         error,

@@ -47,8 +47,7 @@ interface StrapiMedia {
 
 interface SPK {
   id: number;
-  documentId: string;
-  noSPK: string;
+    noSPK: string;
   tanggal: string;
   pekerjaanCustomer: string;
   namaCustomer: string;
@@ -64,8 +63,7 @@ interface SPK {
   selfie?: StrapiMedia | null;
   salesProfile: {
     id: number;
-    documentId: string;
-    surename: string;
+        surename: string;
     namasupervisor: string;
     email: string;
     phonenumber: string;
@@ -152,7 +150,7 @@ export default function SpkManagementPage() {
         editable: formData.editable,
       };
 
-      await updateSpk(editingSpk.documentId, updateData);
+      await updateSpk(editingSpk.id, updateData);
       setIsEditModalOpen(false);
       setEditingSpk(null);
       // Refetch is automatic via React Query invalidation
@@ -228,29 +226,26 @@ export default function SpkManagementPage() {
     return import.meta.env.VITE_STRAPI_URL?.replace('/api', '') || '';
   }, []);
 
-  // Generic file download handler for Strapi media
-  const handleDownloadMedia = useCallback(async (media: StrapiMedia | null | undefined, fileName: string, documentType: string) => {
+  // Generic file download handler for Supabase media
+  const handleDownloadMedia = useCallback(async (media: any, fileName: string, documentType: string) => {
     if (!media) {
       toast.error(`No ${documentType} document available`);
       return;
     }
 
     try {
-      const strapiBaseUrl = getStrapiBaseUrl();
-      const mediaUrl = media.url.startsWith('http')
-        ? media.url
-        : `${strapiBaseUrl}${media.url}`;
+      // In Supabase, we assume media is either a public URL string or a JSON object with a URL
+      const mediaUrl = typeof media === 'string' ? media : media.url;
+      
+      if (!mediaUrl) throw new Error('No valid URL');
 
-      const { default: api } = await import('@/services/api');
-      const response = await api.get(mediaUrl, {
-        responseType: 'blob',
-      });
-
-      const blob = new Blob([response.data], { type: media.mime || 'application/octet-stream' });
+      const response = await fetch(mediaUrl);
+      const blob = await response.blob();
+      
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${fileName}.${media.name.split('.').pop() || 'pdf'}`;
+      link.download = `${fileName}.jpg`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -261,7 +256,7 @@ export default function SpkManagementPage() {
       console.error(`Error downloading ${documentType}:`, error);
       toast.error(`Failed to download ${documentType}`);
     }
-  }, [getStrapiBaseUrl]);
+  }, []);
 
   // Handle KTP download
   const handleDownloadKtp = useCallback((spk: SPK) => {

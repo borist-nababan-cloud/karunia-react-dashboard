@@ -1,5 +1,5 @@
-// Get Strapi base URL from environment
-const STRAPI_BASE_URL = import.meta.env.VITE_STRAPI_URL?.replace('/api', '') || '';
+// Get Supabase base URL from environment
+const SUPABASE_BASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 
 /**
  * Converts a relative URL to an absolute URL
@@ -14,13 +14,12 @@ export const getImageUrl = (url?: string | null): string => {
     return url;
   }
 
-  // If it's a relative URL (starts with /), prepend the Strapi base URL
+  // If it's a relative URL, prepend the Supabase base URL
   if (url.startsWith('/')) {
-    return `${STRAPI_BASE_URL}${url}`;
+    return `${SUPABASE_BASE_URL}${url}`;
   }
 
-  // If it's a relative URL without leading slash, prepend the Strapi base URL with slash
-  return `${STRAPI_BASE_URL}/${url}`;
+  return `${SUPABASE_BASE_URL}/${url}`;
 };
 
 /**

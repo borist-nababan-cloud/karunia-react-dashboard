@@ -21,8 +21,7 @@ import { toast } from 'sonner';
 
 interface Color {
   id: number;
-  documentId: string;
-  colorname: string;
+    colorname: string;
   createdAt: string;
   updatedAt: string;
   publishedAt: string;
@@ -112,7 +111,7 @@ export default function ColorsPage() {
           colorname: formData.colorname,
         };
         await colorsAPI.update(
-          editingItem.documentId,
+          editingItem.id,
           dataToUpdate
         );
         toast.success('Color updated successfully');
@@ -136,7 +135,7 @@ export default function ColorsPage() {
     }
 
     try {
-      await colorsAPI.delete(item.documentId);
+      await colorsAPI.delete(item.id);
       toast.success('Color deleted successfully');
       fetchData();
     } catch (error) {

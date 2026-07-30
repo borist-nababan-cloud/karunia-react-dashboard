@@ -21,8 +21,7 @@ import { toast } from 'sonner';
 
 interface Supervisor {
   id: number;
-  documentId: string;
-  namasupervisor: string;
+    namasupervisor: string;
   createdAt: string;
   updatedAt: string;
   publishedAt: string;
@@ -115,7 +114,7 @@ export default function SupervisorsPage() {
           namasupervisor: formData.namasupervisor,
         };
         await supervisorsAPI.update(
-          editingItem.documentId,
+          editingItem.id,
           dataToUpdate
         );
         toast.success('Supervisor updated successfully');
@@ -140,7 +139,7 @@ export default function SupervisorsPage() {
     }
 
     try {
-      await supervisorsAPI.delete(item.documentId);
+      await supervisorsAPI.delete(item.id);
       toast.success('Supervisor deleted successfully');
       fetchData();
     } catch (error) {

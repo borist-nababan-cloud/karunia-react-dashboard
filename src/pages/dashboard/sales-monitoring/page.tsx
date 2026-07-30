@@ -16,8 +16,7 @@ import { GoogleMapsLoader } from '@/utils/GoogleMapsLoader';
 
 interface SalesStaff {
   id: number;
-  documentId: string;
-  sales_uid: string;
+    sales_uid: string;
   email: string;
   surename: string;
   address: string;

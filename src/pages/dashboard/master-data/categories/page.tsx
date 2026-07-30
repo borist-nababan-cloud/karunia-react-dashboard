@@ -28,8 +28,7 @@ import { toast } from 'sonner';
 
 interface Category {
   id: number;
-  documentId: string;
-  name: string;
+    name: string;
   description?: string;
   status: 'active' | 'inactive';
   createdAt: string;
@@ -138,7 +137,7 @@ export default function CategoriesPage() {
       window.confirm(`Are you sure you want to delete ${item.name} category?`)
     ) {
       try {
-        await categoriesAPI.delete(item.documentId);
+        await categoriesAPI.delete(item.id);
         toast.success('Category deleted successfully');
         fetchData();
       } catch (error) {
@@ -163,7 +162,7 @@ export default function CategoriesPage() {
           status: formData.status,
         };
         await categoriesAPI.update(
-          editingItem.documentId,
+          editingItem.id,
           dataToUpdate
         );
         toast.success('Category updated successfully');
