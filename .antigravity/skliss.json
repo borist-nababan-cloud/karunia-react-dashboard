@@ -1,0 +1,7 @@
+{
+  "module": "Admin Dashboard",
+  "framework": "React",
+  "access_control": "Supabase Auth",
+  "targets": ["SalesApp", "CRM", "Website"],
+  "deployment": "Coolify (Traefik Proxy)"
+}

@@ -47,8 +47,9 @@ interface Article {
     };
     url: string;
   };
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
+  created_by_profile?: { username?: string; email?: string; full_name?: string };
   publishedAt: string;
 }
 
@@ -345,9 +346,14 @@ export default function InformationPage() {
 
                       {/* Meta Info */}
                       <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>
-                          Created: {new Date(article.createdAt).toLocaleDateString()}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span>
+                            Created: {new Date(article.created_at).toLocaleDateString()}
+                          </span>
+                          <span>
+                            By: {article.created_by_profile ? (article.created_by_profile.full_name || article.created_by_profile.username || article.created_by_profile.email) : '-'}
+                          </span>
+                        </div>
                         <Badge variant="secondary" className="text-xs">
                           {article.description.length}/{MAX_DESCRIPTION_LENGTH} chars
                         </Badge>

@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
+import { ROLES, hasAccess } from '@/lib/roles';
 
 interface User {
     id: string; // Supabase user id is string (UUID)
     username: string;
     email: string;
+    roleId?: number;
     role_custom?: string;
 }
 
@@ -55,9 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return;
             }
 
-            const roleName = profile.user_roles?.role_name;
-
-            if (roleName !== 'ADMIN') {
+            if (!hasAccess(profile.role_id, [ROLES.ADMIN, ROLES.SUPER_USER])) {
                 toast.error('Session Terminated: Your account does not have administrative privileges.', { duration: 5000 });
                 await supabase.auth.signOut();
                 setUser(null);
@@ -138,13 +138,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (error) throw error;
 
-            // Fix: Wait for the session JWT to be fully established and available
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            const session = data.session;
             
-            if (sessionError || !session) {
-                await supabase.auth.signOut();
-                throw new Error('Authentication failed: Could not establish session.');
+            if (!session) {
+                // If sign in succeeds but session is null, usually means email confirmation is required
+                throw new Error('Authentication failed: Could not establish session. (Email might require confirmation)');
             }
+
+            // Explicitly set the session to bypass any race conditions with local storage
+            // so that subsequent REST calls have the Authorization header.
+            await supabase.auth.setSession({
+                access_token: session.access_token,
+                refresh_token: session.refresh_token,
+            });
 
             // Instead of trusting metadata, fetch the profile using the valid session
             const { data: profile, error: profileError } = await supabase
@@ -172,9 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 throw new Error('Account blocked.');
             }
 
-            const roleName = profile.user_roles?.role_name;
-
-            if (roleName !== 'ADMIN') {
+            if (!hasAccess(profile.role_id, [ROLES.ADMIN, ROLES.SUPER_USER])) {
                 toast.error('Access Denied: Only administrators can access this dashboard.');
                 await supabase.auth.signOut();
                 throw new Error('Access denied.');
@@ -182,9 +186,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             const mappedUser: User = {
                 id: data.user.id,
-                email: data.user.email || '',
-                username: profile.username || data.user.user_metadata?.username || 'User',
-                role_custom: roleName,
+                username: profile.username || '',
+                email: profile.email || '',
+                roleId: profile.role_id,
+                role_custom: profile.user_roles?.role_name,
             };
 
             setUser(mappedUser);

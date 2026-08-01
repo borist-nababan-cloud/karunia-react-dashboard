@@ -27,8 +27,9 @@ interface Branch {
   address: string;
   latitude: number;
   longitude: number;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
+  created_by_profile?: { username?: string; email?: string; full_name?: string };
   publishedAt: string;
   city: string | null;
   province: string | null;
@@ -115,13 +116,26 @@ export default function BranchesPage() {
       ),
     },
     {
-      accessorKey: 'createdAt',
+      accessorKey: 'created_at',
       header: 'Created',
       Cell: ({ row }) => {
-        const date = new Date(row.original.createdAt);
+        const date = new Date(row.original.created_at);
         return (
           <div className="text-sm text-gray-600">
             {date.toLocaleDateString()}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'created_by_profile.username',
+      header: 'Created By',
+      Cell: ({ row }) => {
+        const profile = row.original.created_by_profile;
+        const displayName = profile ? (profile.full_name || profile.username || profile.email) : null;
+        return (
+          <div className="text-sm text-gray-600">
+            {displayName || '-'}
           </div>
         );
       },

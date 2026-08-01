@@ -2,13 +2,13 @@ import { supabase } from '../lib/supabaseClient';
 
 export const createCRUDAPI = (endpoint: string) => ({
     getAll: async (params = {}) => {
-        const { data, error } = await supabase.from(endpoint).select('*');
+        const { data, error } = await supabase.from(endpoint).select('*, created_by_profile:user_profiles!created_by(username, email, full_name)');
         if (error) throw error;
         return data;
     },
     
     getById: async (id: string | number) => {
-        const { data, error } = await supabase.from(endpoint).select('*').eq('id', id).single();
+        const { data, error } = await supabase.from(endpoint).select('*, created_by_profile:user_profiles!created_by(username, email, full_name)').eq('id', id).single();
         if (error) throw error;
         return data;
     },
@@ -34,13 +34,13 @@ export const createCRUDAPI = (endpoint: string) => ({
     },
 
     find: async (filters: any = {}) => {
-        const { data, error } = await supabase.from(endpoint).select('*');
+        const { data, error } = await supabase.from(endpoint).select('*, created_by_profile:user_profiles!created_by(username, email, full_name)');
         if (error) throw error;
         return { data };
     },
 
     findAll: async (filters: any = {}) => {
-        const { data, error } = await supabase.from(endpoint).select('*');
+        const { data, error } = await supabase.from(endpoint).select('*, created_by_profile:user_profiles!created_by(username, email, full_name)');
         if (error) throw error;
         return { data }; 
     }

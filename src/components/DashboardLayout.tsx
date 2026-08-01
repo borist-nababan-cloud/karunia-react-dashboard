@@ -22,8 +22,18 @@ import {
   Info
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { ROLES, hasAccess, RoleId } from '@/lib/roles';
 
-const navigationGroups = [
+// Define the type for items to include allowedRoles
+type NavItem = {
+  name: string;
+  href?: string;
+  icon: any;
+  allowedRoles?: RoleId[];
+  children?: NavItem[];
+};
+
+const navigationGroups: { groupName: string, items: NavItem[] }[] = [
   {
     groupName: 'Sales Support',
     items: [
@@ -31,6 +41,7 @@ const navigationGroups = [
       {
         name: 'Master Data',
         icon: Settings,
+        allowedRoles: [ROLES.ADMIN, ROLES.SUPER_USER],
         children: [
           { name: 'Vehicle Groups', href: '/dashboard/master-data/vehicle-groups', icon: Car },
           { name: 'Vehicle Types', href: '/dashboard/master-data/vehicle-types', icon: Car },
@@ -40,7 +51,7 @@ const navigationGroups = [
           { name: 'Information', href: '/dashboard/master-data/information', icon: Info },
         ]
       },
-      { name: 'User Management', href: '/dashboard/user-management', icon: UserCheck },
+      { name: 'User Management', href: '/dashboard/user-management', icon: UserCheck, allowedRoles: [ROLES.ADMIN, ROLES.SUPER_USER] },
       { name: 'Sales Monitoring', href: '/dashboard/sales-monitoring', icon: MapIcon },
       { name: 'SPK Management', href: '/dashboard/spk-management', icon: FileText },
     ]
@@ -92,7 +103,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   {group.items.length === 0 ? (
                     <p className="text-xs text-gray-400 italic pl-2 mt-1">Coming soon...</p>
                   ) : (
-                    group.items.map((item) => (
+                    group.items.map((item) => {
+                      if (item.allowedRoles && !hasAccess(user?.roleId, item.allowedRoles)) {
+                        return null;
+                      }
+                      return (
                       <div key={item.name}>
                         {item.children ? (
                           <div>
@@ -133,7 +148,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                           </Link>
                         )}
                       </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
