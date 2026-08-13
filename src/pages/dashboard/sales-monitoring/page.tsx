@@ -124,7 +124,6 @@ export default function SalesMonitoringPage() {
     // Try to get the map container by ID
     const mapContainer = document.getElementById(MAP_CONTAINER_ID);
     if (!mapContainer) {
-      console.warn('[SalesMonitoring] Map container element not found (ID:', MAP_CONTAINER_ID, ')');
       return;
     }
 
@@ -191,7 +190,7 @@ export default function SalesMonitoringPage() {
         const marker = new (window.google.maps.Marker as any)({
           position: { lat: finalLat, lng: finalLng },
           map,
-          title: `${sales.surename} (${sales.city})`, // Improved tooltip
+          title: `${sales.surename || (sales as any).full_name || (sales as any).username || 'Unknown User'} (${sales.city})`, // Improved tooltip
           icon: {
             path: window.google.maps.SymbolPath.CIRCLE,
             scale: 10,
@@ -220,9 +219,9 @@ export default function SalesMonitoringPage() {
 
         const infoContent = `
           <div style="padding: 10px; min-width: 200px; display: flex; align-items: center; gap: 10px;">
-            ${fullPhotoUrl ? `<img src="${fullPhotoUrl}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;" />` : '<div style="width: 50px; height: 50px; border-radius: 50%; background-color: #e5e7eb; display: flex; align-items: center; justify-content: center;"><span style="font-weight: bold; color: #6b7280;">${sales.surename.charAt(0)}</span></div>'}
+            ${fullPhotoUrl ? `<img src="${fullPhotoUrl}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;" />` : `<div style="width: 50px; height: 50px; border-radius: 50%; background-color: #e5e7eb; display: flex; align-items: center; justify-content: center;"><span style="font-weight: bold; color: #6b7280;">${((sales as any).surename || (sales as any).full_name || (sales as any).username || 'U').charAt(0)}</span></div>`}
             <div>
-              <h3 style="margin: 0 0 5px 0; font-weight: bold; font-size: 14px;">${sales.surename}</h3>
+              <h3 style="margin: 0 0 5px 0; font-weight: bold; font-size: 14px;">${(sales as any).surename || (sales as any).full_name || (sales as any).username || 'Unknown User'}</h3>
               <p style="margin: 2px 0; font-size: 12px; color: #6b7280;">📱 ${sales.wanumber || 'No WhatsApp'}</p>
               <p style="margin: 2px 0; font-size: 12px; color: ${sales.online_stat === true ? '#10b981' : '#ef4444'}; font-weight: bold;">
                 ● ${sales.online_stat === true ? 'ONLINE' : 'OFFLINE'}
@@ -455,11 +454,11 @@ export default function SalesMonitoringPage() {
                           <AvatarImage
                             src={getOptimalImageUrl(sales.photo_profile)}
                           />
-                          <AvatarFallback>{sales.surename.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                          <AvatarFallback>{(sales.surename || (sales as any).full_name || (sales as any).username || 'User').split(' ').map((n: string) => n[0]).join('').substring(0, 2)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium truncate">{sales.surename}</p>
+                            <p className="text-sm font-medium truncate">{sales.surename || (sales as any).full_name || (sales as any).username || 'Unknown User'}</p>
                             <Badge
                               variant={sales.online_stat === true ? 'default' : 'secondary'}
                               className="text-xs"

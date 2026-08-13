@@ -26,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const currentUserId = React.useRef<string | null>(null);
 
     const handleUserSession = useCallback(async (authUser: any) => {
         try {
@@ -34,6 +35,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 .select('*, user_roles(role_name)')
                 .eq('id', authUser.id)
                 .single();
+
+            // If it's a genuine network or auth error (not just missing profile)
+            if (error && error.code !== 'PGRST116') {
+                await supabase.auth.signOut();
+                setUser(null);
+                currentUserId.current = null;
+                return;
+            }
 
             if (error || !profile) {
                 // Securely ensure the profile exists via RPC (bypasses RLS issues)
@@ -47,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 toast.error('Your profile has been registered. Please wait for an administrator to verify your identity.', { duration: 6000 });
                 await supabase.auth.signOut();
                 setUser(null);
+                currentUserId.current = null;
                 return;
             }
 
@@ -54,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 toast.error('Access Denied: Your account has been blocked.');
                 await supabase.auth.signOut();
                 setUser(null);
+                currentUserId.current = null;
                 return;
             }
 
@@ -61,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 toast.error('Session Terminated: Your account does not have administrative privileges.', { duration: 5000 });
                 await supabase.auth.signOut();
                 setUser(null);
+                currentUserId.current = null;
                 return;
             }
 
@@ -68,50 +80,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 id: authUser.id,
                 email: authUser.email || '',
                 username: profile.username || authUser.user_metadata?.username || 'User',
-                role_custom: roleName,
+                roleId: profile.role_id,
+                role_custom: profile.user_roles?.role_name,
             };
             
             setUser(mappedUser);
+            currentUserId.current = mappedUser.id;
         } catch (error) {
             console.error('Error handling session:', error);
             setUser(null);
+            currentUserId.current = null;
         } finally {
             setIsLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        const getSession = async () => {
-            try {
-                const { data: { session }, error } = await supabase.auth.getSession();
-                
-                if (error) throw error;
-
-                if (session?.user) {
-                    await handleUserSession(session.user);
-                } else {
-                    setUser(null);
-                    setIsLoading(false);
-                }
-            } catch (err) {
-                console.error('Session check failed:', err);
-                setUser(null);
-                setIsLoading(false);
-            }
-        };
-
-        getSession();
-
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_OUT') {
                 setUser(null);
+                currentUserId.current = null;
                 setIsLoading(false);
                 return;
             }
 
             if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED')) {
-                // If user state is already set and matching, skip re-fetching to save DB calls, unless forced
-                if (user && user.id === session.user.id) {
+                // Skip re-fetching if we already have the session for this user
+                if (currentUserId.current === session.user.id) {
                     setIsLoading(false);
                     return;
                 }
@@ -119,12 +114,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 await handleUserSession(session.user);
             } else if (!session) {
                 setUser(null);
+                currentUserId.current = null;
                 setIsLoading(false);
             }
         });
 
         return () => subscription.unsubscribe();
-    }, [handleUserSession, user]);
+    }, [handleUserSession]);
 
     const login = async (email: string, password: string) => {
         try {

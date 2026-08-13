@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { CRUDTable } from '@/components/CRUDTable';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { supervisorsAPI } from '@/services/api';
+import { supervisorsAPI, userProfilesAPI } from '@/services/api';
 import { toast } from 'sonner';
 
 interface Supervisor {
@@ -26,6 +26,7 @@ interface Supervisor {
   updated_at: string;
   created_by_profile?: { username?: string; email?: string; full_name?: string };
   publishedAt: string;
+  user_auth_id?: string | null;
 }
 
 
@@ -46,7 +47,10 @@ export default function SupervisorsPage() {
   const [editingItem, setEditingItem] = useState<Supervisor | null>(null);
   const [formData, setFormData] = useState<Partial<Supervisor>>({
     namasupervisor: '',
+    user_auth_id: null,
   });
+
+  const [profiles, setProfiles] = useState<any[]>([]);
 
   // Fetch data from API
   const fetchData = async () => {
@@ -64,7 +68,17 @@ export default function SupervisorsPage() {
 
   useEffect(() => {
     fetchData();
+    fetchProfiles();
   }, []);
+
+  const fetchProfiles = async () => {
+    try {
+      const res = await userProfilesAPI.getEligibleUsersForSupervisors();
+      setProfiles(res.data || []);
+    } catch (err) {
+      console.error('Failed to load user profiles:', err);
+    }
+  };
 
   const columns: MRT_ColumnDef<Supervisor>[] = [
     {
@@ -109,6 +123,7 @@ export default function SupervisorsPage() {
   const handleAdd = () => {
     setFormData({
       namasupervisor: '',
+      user_auth_id: null,
     });
     setIsAddDialogOpen(true);
   };
@@ -126,6 +141,7 @@ export default function SupervisorsPage() {
         // Edit existing item
         const dataToUpdate = {
           namasupervisor: formData.namasupervisor,
+          user_auth_id: formData.user_auth_id,
         };
         await supervisorsAPI.update(
           editingItem.id,
@@ -213,6 +229,23 @@ export default function SupervisorsPage() {
                     }
                     placeholder="e.g., ASEP SOPYAN"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="user_auth_id">Linked Auth Profile</Label>
+                  <select
+                    id="user_auth_id"
+                    value={formData.user_auth_id || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, user_auth_id: e.target.value || null })
+                    }
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="">-- No Profile Linked --</option>
+                    {profiles.map(p => (
+                      <option key={p.id} value={p.id}>{p.full_name || p.username || p.email}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="flex justify-end space-x-2 pt-4">

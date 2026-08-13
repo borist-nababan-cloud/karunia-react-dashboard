@@ -22,7 +22,8 @@ import { Combobox } from '@/components/ui/combobox';
 
 interface VehicleType {
   id: number;
-    price: number;
+  name: string;
+  price: number;
   created_at: string;
   updated_at: string;
   created_by_profile?: { username?: string; email?: string; full_name?: string };
@@ -117,7 +118,8 @@ export default function VehicleTypesPage() {
       },
     },
     {
-      accessorKey: 'created_by_profile.username',
+      id: 'created_by',
+      accessorFn: (row) => row.created_by_profile?.username || '',
       header: 'Created By',
       Cell: ({ row }) => {
         const profile = row.original.created_by_profile;

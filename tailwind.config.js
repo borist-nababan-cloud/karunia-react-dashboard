@@ -13,9 +13,20 @@ export default {
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			sm: 'calc(var(--radius) - 4px)',
+            xl: '1rem',
+            '2xl': '1.5rem',
   		},
+        boxShadow: {
+            soft: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+        },
   		colors: {
+            astra: {
+                red: '#E30613',
+                silver: '#E5E7EB',
+                charcoal: '#1F2937',
+                white: '#FFFFFF',
+            },
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {

@@ -109,8 +109,20 @@ const SpkPdfDocument: React.FC<SpkPdfProps> = ({ data }) => {
     };
 
     const formatCurrency = (amount: number | string) => {
-        if (!amount) return 'Rp 0';
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Number(amount));
+        if (!amount) return 'Rp. 0';
+        const formatted = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0 }).format(Number(amount));
+        return `Rp. ${formatted}`;
+    };
+
+    const formatTenor = (tenor: string | number) => {
+        if (!tenor) return '-';
+        const t = Number(tenor);
+        if (isNaN(t)) return `${tenor} Bulan`;
+        const tahun = Math.floor(t / 12);
+        const bulan = t % 12;
+        if (tahun > 0 && bulan > 0) return `${tahun} Tahun ${bulan} Bulan`;
+        if (tahun > 0) return `${tahun} Tahun`;
+        return `${bulan} Bulan`;
     };
 
     // Use absolute URL for image if possible, or relative if public folder works
@@ -204,8 +216,8 @@ const SpkPdfDocument: React.FC<SpkPdfProps> = ({ data }) => {
                     <View style={styles.column}>
                         <Text style={styles.sectionTitle}>IV. RINCIAN PEMBAYARAN</Text>
                         <View style={styles.row}>
-                            <Text style={styles.label}>Cara Bayar</Text>
-                            <Text style={styles.value}>: {data.paymentInfo?.caraBayar || '-'}</Text>
+                            <Text style={styles.label}>Pembelian Via</Text>
+                            <Text style={styles.value}>: {data.paymentInfo?.pembelianVia || '-'}</Text>
                         </View>
                         <View style={styles.row}>
                             <Text style={styles.label}>Harga OTR</Text>
@@ -219,22 +231,14 @@ const SpkPdfDocument: React.FC<SpkPdfProps> = ({ data }) => {
                             <Text style={styles.label}>Uang Muka (DP)</Text>
                             <Text style={styles.value}>: {formatCurrency(data.paymentInfo?.dp)}</Text>
                         </View>
-                        {data.paymentInfo?.caraBayar === 'KREDIT' && (
-                            <>
-                                <View style={styles.row}>
-                                    <Text style={styles.label}>Angsuran</Text>
-                                    <Text style={styles.value}>: {formatCurrency(data.paymentInfo?.angsuran)}</Text>
-                                </View>
-                                <View style={styles.row}>
-                                    <Text style={styles.label}>Tenor</Text>
-                                    <Text style={styles.value}>: {data.paymentInfo?.tenor} Bulan</Text>
-                                </View>
-                                <View style={styles.row}>
-                                    <Text style={styles.label}>Leasing</Text>
-                                    <Text style={styles.value}>: {data.paymentInfo?.namaLeasing || '-'}</Text>
-                                </View>
-                            </>
-                        )}
+                        <View style={styles.row}>
+                            <Text style={styles.label}>Tenor</Text>
+                            <Text style={styles.value}>: {formatTenor(data.paymentInfo?.tenor)}</Text>
+                        </View>
+                        <View style={styles.row}>
+                            <Text style={styles.label}>Nama Leasing</Text>
+                            <Text style={styles.value}>: {data.paymentInfo?.namaLeasing || '-'}</Text>
+                        </View>
                     </View>
                 </View>
 

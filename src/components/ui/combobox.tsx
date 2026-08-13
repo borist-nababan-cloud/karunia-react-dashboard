@@ -34,7 +34,7 @@ export function Combobox({
   React.useEffect(() => {
     setFilteredOptions(
       options.filter(option =>
-        option.label.toLowerCase().includes(searchTerm.toLowerCase())
+        (option.label || "").toLowerCase().includes((searchTerm || "").toLowerCase())
       )
     )
   }, [searchTerm, options])

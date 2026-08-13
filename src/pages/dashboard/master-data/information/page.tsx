@@ -15,38 +15,15 @@ import { toast } from 'sonner';
 import { Edit, Plus, FileImage, Trash2, Image as ImageIcon } from 'lucide-react';
 import { createCRUDAPI, uploadFile } from '@/services/api';
 import { getImageUrl, getOptimalImageUrl } from '@/utils/imageUtils';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 interface Article {
   id: number;
     title: string;
   description: string;
   slug: string | null;
-  cover?: {
-    id: number;
-        name: string;
-    alternativeText?: string;
-    caption?: string;
-    width: number;
-    height: number;
-    formats?: {
-      thumbnail?: {
-        url: string;
-        width: number;
-        height: number;
-      };
-      small?: {
-        url: string;
-        width: number;
-        height: number;
-      };
-      medium?: {
-        url: string;
-        width: number;
-        height: number;
-      };
-    };
-    url: string;
-  };
+  cover_url?: string;
   created_at: string;
   updated_at: string;
   created_by_profile?: { username?: string; email?: string; full_name?: string };
@@ -54,8 +31,6 @@ interface Article {
 }
 
 const articlesAPI = createCRUDAPI('articles');
-
-const MAX_DESCRIPTION_LENGTH = 80;
 
 export default function InformationPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -112,9 +87,6 @@ export default function InformationPage() {
 
   // Handle form input changes
   const handleInputChange = (field: string, value: string) => {
-    if (field === 'description' && value.length > MAX_DESCRIPTION_LENGTH) {
-      return; // Prevent typing beyond max length
-    }
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -188,7 +160,7 @@ export default function InformationPage() {
       const articleData = {
         title: formData.title.trim(),
         description: formData.description.trim(),
-        cover: coverId,
+        cover_url: coverId,
       };
 
       await articlesAPI.create(articleData);
@@ -211,7 +183,9 @@ export default function InformationPage() {
       title: article.title,
       description: article.description,
     });
-    setImagePreview(article.cover ? getOptimalImageUrl(article.cover) : null);
+    if (article.cover_url) {
+        setImagePreview(article.cover_url);
+      }
     setSelectedFile(null);
     setIsEditModalOpen(true);
   };
@@ -232,7 +206,7 @@ export default function InformationPage() {
 
     setIsSubmitting(true);
     try {
-      let coverId: string | number | null = editingArticle.cover?.id || null;
+      let coverId: string | number | null = editingArticle.cover_url || null;
 
       // Upload new image if selected
       if (selectedFile) {
@@ -246,7 +220,7 @@ export default function InformationPage() {
       const articleData = {
         title: formData.title.trim(),
         description: formData.description.trim(),
-        cover: coverId,
+        cover_url: coverId,
       };
 
       await articlesAPI.update(editingArticle.id, articleData);
@@ -309,10 +283,10 @@ export default function InformationPage() {
                 <Card key={article.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   {/* Cover Image */}
                   <div className="aspect-video bg-gray-100 relative overflow-hidden">
-                    {article.cover ? (
+                    {article.cover_url ? (
                       <img
-                        src={getOptimalImageUrl(article.cover)}
-                        alt={article.cover.alternativeText || article.title}
+                        src={article.cover_url}
+                        alt={article.title}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -340,12 +314,13 @@ export default function InformationPage() {
                       </h3>
 
                       {/* Description */}
-                      <p className="text-gray-600 text-sm line-clamp-3">
-                        {article.description}
-                      </p>
+                      <div 
+                        className="text-gray-600 text-sm line-clamp-3 prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{ __html: article.description }} 
+                      />
 
                       {/* Meta Info */}
-                      <div className="flex items-center justify-between text-xs text-gray-500">
+                      <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
                         <div className="flex flex-col gap-1">
                           <span>
                             Created: {new Date(article.created_at).toLocaleDateString()}
@@ -354,9 +329,6 @@ export default function InformationPage() {
                             By: {article.created_by_profile ? (article.created_by_profile.full_name || article.created_by_profile.username || article.created_by_profile.email) : '-'}
                           </span>
                         </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {article.description.length}/{MAX_DESCRIPTION_LENGTH} chars
-                        </Badge>
                       </div>
                     </div>
                   </CardContent>
@@ -389,20 +361,14 @@ export default function InformationPage() {
 
                 {/* Description Input */}
                 <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder="Enter article description"
-                    className="mt-1 resize-none"
-                    rows={3}
-                  />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>Maximum {MAX_DESCRIPTION_LENGTH} characters</span>
-                    <span className={formData.description.length === MAX_DESCRIPTION_LENGTH ? 'text-orange-500 font-medium' : ''}>
-                      {formData.description.length}/{MAX_DESCRIPTION_LENGTH}
-                    </span>
+                  <Label htmlFor="description">Description (Rich Text)</Label>
+                  <div className="mt-1">
+                    <ReactQuill 
+                      theme="snow"
+                      value={formData.description}
+                      onChange={(content) => handleInputChange('description', content)}
+                      className="bg-white rounded-md h-[200px] mb-12"
+                    />
                   </div>
                 </div>
 
@@ -504,20 +470,14 @@ export default function InformationPage() {
 
                 {/* Description Input */}
                 <div>
-                  <Label htmlFor="edit-description">Description</Label>
-                  <Textarea
-                    id="edit-description"
-                    value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder="Enter article description"
-                    className="mt-1 resize-none"
-                    rows={3}
-                  />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>Maximum {MAX_DESCRIPTION_LENGTH} characters</span>
-                    <span className={formData.description.length === MAX_DESCRIPTION_LENGTH ? 'text-orange-500 font-medium' : ''}>
-                      {formData.description.length}/{MAX_DESCRIPTION_LENGTH}
-                    </span>
+                  <Label htmlFor="edit-description">Description (Rich Text)</Label>
+                  <div className="mt-1">
+                    <ReactQuill 
+                      theme="snow"
+                      value={formData.description}
+                      onChange={(content) => handleInputChange('description', content)}
+                      className="bg-white rounded-md h-[200px] mb-12"
+                    />
                   </div>
                 </div>
 

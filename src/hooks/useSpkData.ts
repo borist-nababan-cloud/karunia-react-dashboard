@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { spkAPI } from '@/services/api';
+import supabase, { spkAPI } from '@/services/api';
 import { useState, useCallback } from 'react';
 
 // Types for SPK with pagination
@@ -77,45 +77,132 @@ export function useSpkData(initialParams: Partial<SpkPaginationParams> = {}): Us
       twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
       const defaultStartDate = twoMonthsAgo.toISOString().split('T')[0];
 
-      const apiParams: any = {};
+      let query = supabase
+        .from('spks')
+        .select(`
+          *,
+          salesProfile:user_profiles!created_by(id, full_name, username, email, phone, supervisor:supervisors!user_profiles_supervisor_id_fkey(namasupervisor)),
+          branch:branches(*),
+          detailInfo:spk_section_details(*),
+          unitInfo:spk_section_units(
+            *,
+            vehicleType:vehicle_types(*),
+            color:colors(*)
+          ),
+          paymentInfo:spk_section_payments(*)
+        `, { count: 'exact' });
+
+      // Filtering by date range
+      const startDate = params.startDate || defaultStartDate;
+      const endDate = params.endDate || new Date().toISOString().split('T')[0];
+      query = query.gte('tanggal', startDate).lte('tanggal', endDate);
+
+      // Additional field filter
+      if (params.filterField && params.filterValue) {
+        let dbField = params.filterField;
+        if (dbField === 'noSPK') dbField = 'no_spk';
+        else if (dbField === 'namaCustomer') dbField = 'nama_customer';
+        else if (dbField === 'noTeleponCustomer') dbField = 'no_telepon_customer';
+        query = query.ilike(dbField, '%' + params.filterValue + '%');
+      }
+
+      // Sorting (server-side)
+      let sortField = params.sortField || 'createdAt';
+      if (sortField === 'createdAt') sortField = 'created_at';
+      else if (sortField === 'noSPK') sortField = 'no_spk';
+      else if (sortField === 'tanggal') sortField = 'tanggal';
+      else if (sortField === 'namaCustomer') sortField = 'nama_customer';
+
+      query = query.order(sortField, { ascending: params.sortOrder === 'asc' });
 
       // Pagination
       const page = params.page || 1;
       let pageSize = params.pageSize || 25;
 
-      if (pageSize === -1) {
-        // Fetch all (or a very large number)
-        pageSize = 10000;
-        apiParams['pagination[page]'] = 1;
-        apiParams['pagination[pageSize]'] = pageSize;
-      } else {
-        apiParams['pagination[page]'] = page;
-        apiParams['pagination[pageSize]'] = pageSize;
-        // apiParams['pagination[start]'] = (page - 1) * pageSize; // remove conflict with page/pageSize
+      if (pageSize !== -1) {
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize - 1;
+        query = query.range(from, to);
       }
 
-      // Sorting (server-side) - fixed syntax
-      const sortField = params.sortField || 'createdAt';
-      const sortOrder = params.sortOrder || 'desc';
-      apiParams[`sort[${sortField}]`] = sortOrder;
+      const { data, error, count } = await query;
+      if (error) throw error;
 
-      // Populate nested relations - use Strapi v4 format
-      apiParams['populate'] = 'salesProfile,detailInfo,unitInfo,ktpPaspor,kartuKeluarga,selfie';
-      apiParams['populate[unitInfo]'] = 'vehicleType,color';
+      // Transform snake_case data to Strapi camelCase format expected by the dashboard and SpkPdfDocument
+      const mappedData = data?.map((item: any) => ({
+        id: item.id,
+        noSPK: item.no_spk,
+        tanggal: item.tanggal,
+        pekerjaanCustomer: item.pekerjaan_customer,
+        namaCustomer: item.nama_customer,
+        namaDebitur: item.nama_debitur,
+        emailcustomer: item.email_customer,
+        alamatCustomer: item.alamat_customer,
+        noTeleponCustomer: item.no_telepon_customer,
+        kotacustomer: item.kota_customer,
+        editable: item.editable,
+        finish: item.finish,
+        branch_id: item.branch_id,
+        ktpPaspor: item.ktp_url ? { url: item.ktp_url } : null,
+        kartuKeluarga: item.kk_url ? { url: item.kk_url } : null,
+        selfie: item.selfie_url ? { url: item.selfie_url } : null,
+        salesProfile: item.salesProfile ? {
+          id: item.salesProfile.id,
+          surename: item.salesProfile.full_name || item.salesProfile.username || '-',
+          namasupervisor: item.salesProfile.supervisor ? (Array.isArray(item.salesProfile.supervisor) ? item.salesProfile.supervisor[0]?.namasupervisor : item.salesProfile.supervisor.namasupervisor) || '-' : '-',
+          email: item.salesProfile.email || '-',
+          phonenumber: item.salesProfile.phone || '-',
+          city: '-',
+          address: '-',
+        } : null,
+        branch: item.branch || null,
+        detailInfo: (() => {
+          const d = Array.isArray(item.detailInfo) ? item.detailInfo[0] : item.detailInfo;
+          return d ? {
+            namaBpkbStnk: d.nama_bpkb_stnk,
+            kotaStnkBpkb: d.kota_stnk_bpkb,
+            alamatBpkbStnk: d.alamat_bpkb_stnk,
+          } : null;
+        })(),
+        unitInfo: (() => {
+          const u = Array.isArray(item.unitInfo) ? item.unitInfo[0] : item.unitInfo;
+          return u ? {
+            noRangka: u.no_rangka,
+            noMesin: u.no_mesin,
+            tahun: u.tahun,
+            hargaOtr: u.harga_otr,
+            vehicleType: u.vehicleType,
+            color: u.color,
+          } : null;
+        })(),
+        paymentInfo: (() => {
+          const p = Array.isArray(item.paymentInfo) ? item.paymentInfo[0] : item.paymentInfo;
+          return p ? {
+            caraBayar: p.cara_bayar,
+            angsuran: p.angsuran,
+            tandaJadi: p.tanda_jadi,
+            dp: p.dp,
+            namaLeasing: p.nama_leasing,
+            pembelianVia: p.pembelian_via,
+            tenor: p.tenor,
+            keterangan: p.keterangan,
+          } : null;
+        })(),
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+      }));
 
-      // Filtering by date range
-      const startDate = params.startDate || defaultStartDate;
-      const endDate = params.endDate || new Date().toISOString().split('T')[0];
-      apiParams['filters[tanggal][$gte]'] = startDate;
-      apiParams['filters[tanggal][$lte]'] = endDate;
-
-      // Additional field filter
-      if (params.filterField && params.filterValue) {
-        apiParams[`filters[${params.filterField}][$containsi]`] = params.filterValue;
-      }
-
-      const response = await spkAPI.find(apiParams);
-      return response;
+      return {
+        data: mappedData || [],
+        meta: {
+          pagination: {
+            page: page,
+            pageSize: pageSize,
+            total: count || 0,
+            pageCount: pageSize === -1 ? 1 : Math.ceil((count || 0) / pageSize),
+          }
+        }
+      };
     },
     staleTime: 2 * 60 * 1000, // 2 minutes - reduced for fresher data
     gcTime: 5 * 60 * 1000, // 5 minutes - cache duration

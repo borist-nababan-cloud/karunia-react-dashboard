@@ -54,9 +54,74 @@ export const colorsAPI = createCRUDAPI('colors');
 export const supervisorsAPI = createCRUDAPI('supervisors');
 export const branchesAPI = createCRUDAPI('branches');
 export const salesStaffAPI = createCRUDAPI('sales_staffs');
-export const salesProfilesAPI = createCRUDAPI('sales_profiles');
+export const salesProfilesAPI = createCRUDAPI('user_profiles'); // Redirect to user_profiles as sales_profiles is deprecated
 export const articlesAPI = createCRUDAPI('articles');
 export const categoriesAPI = createCRUDAPI('categories');
+
+export const userProfilesAPI = {
+    findSalesProfiles: async () => {
+        // Fetch all users with role_id = 3 (SALES) and join their supervisor from the master table
+        const { data, error } = await supabase
+            .from('user_profiles')
+            .select(`
+                *,
+                supervisor:supervisors!user_profiles_supervisor_id_fkey (
+                    namasupervisor
+                )
+            `)
+            .eq('role_id', 3);
+        if (error) throw error;
+        return { data };
+    },
+    findSupervisors: async () => {
+        // Fetch all master supervisors
+        const { data, error } = await supabase
+            .from('supervisors')
+            .select('*');
+        if (error) throw error;
+        return { data };
+    },
+    update: async (id: string, data: any) => {
+        const { data: result, error } = await supabase
+            .from('user_profiles')
+            .update(data)
+            .eq('id', id)
+            .select()
+            .single();
+        if (error) throw error;
+        return result;
+    },
+    getEligibleUsersForSupervisors: async () => {
+        const { data, error } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .not('role_id', 'in', '(4,8)');
+        if (error) throw error;
+        return { data };
+    }
+};
+export const stockAPI = {
+    findReadyStock: async () => {
+        // Fetch only where jual = 'N' and join mstr_type_detail for nama_group_detail
+        // Filter out empty no_rangka and no_mesin, and sort by year descending
+        const { data, error } = await supabase
+            .from('stock')
+            .select(`
+                *,
+                mstr_type_detail:id_type (
+                    nama_group_detail
+                )
+            `)
+            .eq('jual', 'N')
+            .not('no_rangka', 'is', null)
+            .neq('no_rangka', '')
+            .not('no_mesin', 'is', null)
+            .neq('no_mesin', '')
+            .order('tahun', { ascending: false });
+        if (error) throw error;
+        return { data };
+    }
+};
 
 export const usersAPI = {
     getSalesUsers: async () => {
@@ -84,15 +149,16 @@ export const usersAPI = {
 export const salesMonitoringAPI = {
     getSalesProfilesWithSPK: async () => {
         const { data, error } = await supabase
-            .from('sales_profiles')
-            .select('*, spks(*)')
+            .from('user_profiles')
+            .select('*, spks!created_by(*)')
+            .eq('role_id', 3)
             .eq('blocked', false)
             .order('updated_at', { ascending: false });
         if (error) throw error;
         return { data };
     },
     getSalesProfilesByStatus: async (onlineStatus?: boolean) => {
-        let query = supabase.from('sales_profiles').select('*').eq('approved', true).eq('blocked', false);
+        let query = supabase.from('user_profiles').select('*').eq('role_id', 3).eq('confirmed', true).eq('blocked', false);
         if (onlineStatus !== undefined) {
             query = query.eq('online_stat', onlineStatus);
         }
@@ -100,9 +166,9 @@ export const salesMonitoringAPI = {
         if (error) throw error;
         return { data };
     },
-    updateSalesProfileLocation: async (profileId: number, location: any, onlineStatus: boolean) => {
+    updateSalesProfileLocation: async (profileId: string, location: any, onlineStatus: boolean) => {
         const { data, error } = await supabase
-            .from('sales_profiles')
+            .from('user_profiles')
             .update({ location, online_stat: onlineStatus })
             .eq('id', profileId)
             .select()

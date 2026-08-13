@@ -26,45 +26,39 @@ import { CRUDTable } from '@/components/CRUDTable';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { StatusBadge } from '@/components/StatusBadge';
-import { salesProfilesAPI, supervisorsAPI } from '@/services/api';
+import { userProfilesAPI } from '@/services/api';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabaseClient';
 
-
-interface SalesProfile {
-  id: number;
-    sales_uid: string;
-  email: string;
-  surename: string;
-  address: string;
-  city: string;
-  province: string;
-  phonenumber: string;
-  wanumber: string;
-  namasupervisor: string;
-  approved: boolean;
-  photo_profile: string | null;
+interface UserProfile {
+  id: string;
+  username: string | null;
+  email: string | null;
+  full_name: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  supervisor_id: number | null;
   blocked: boolean;
-  createdAt: string;
-  updatedAt: string;
-  publishedAt: string;
-}
-
-interface Supervisor {
-  id: number;
-    namasupervisor: string;
+  confirmed: boolean;
+  online_stat: boolean;
+  role_id: number | null;
+  created_at: string;
+  updated_at: string;
+  supervisor?: {
+    namasupervisor: string | null;
+  };
 }
 
 export default function UserManagementPage() {
-
-  const [data, setData] = useState<SalesProfile[]>([]);
-  const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
+  const [data, setData] = useState<UserProfile[]>([]);
+  const [supervisors, setSupervisors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<SalesProfile | null>(null);
-  const [formData, setFormData] = useState<Partial<SalesProfile>>({
-    approved: false,
+  const [editingItem, setEditingItem] = useState<UserProfile | null>(null);
+  const [formData, setFormData] = useState<Partial<UserProfile>>({
+    confirmed: false,
     blocked: false,
-    namasupervisor: '',
+    supervisor_id: null,
   });
 
   // Fetch data from API
@@ -72,9 +66,8 @@ export default function UserManagementPage() {
     try {
       setLoading(true);
       const [salesProfilesResponse, supervisorsResponse] = await Promise.all([
-        // Fetch all records using recursive strategy
-        salesProfilesAPI.findAll(),
-        supervisorsAPI.findAll()
+        userProfilesAPI.findSalesProfiles(),
+        userProfilesAPI.findSupervisors()
       ]);
       setData(salesProfilesResponse.data || []);
       setSupervisors(supervisorsResponse.data || []);
@@ -90,46 +83,47 @@ export default function UserManagementPage() {
     fetchData();
   }, []);
 
-  const columns: MRT_ColumnDef<SalesProfile>[] = [
+  const columns: MRT_ColumnDef<UserProfile>[] = [
     {
-      accessorKey: 'sales_uid',
-      header: 'Sales ID',
+      accessorKey: 'email',
+      header: 'Email',
       Cell: ({ row }) => (
-        <div className="font-medium">{row.original.sales_uid}</div>
+        <div className="text-sm">{row.original.email || '-'}</div>
       ),
     },
     {
-      accessorKey: 'surename',
+      accessorKey: 'full_name',
       header: 'Full Name',
       Cell: ({ row }) => (
-        <div className="text-sm">{row.original.surename || '-'}</div>
+        <div className="text-sm font-medium">{row.original.full_name || '-'}</div>
       ),
     },
     {
-      accessorKey: 'namasupervisor',
+      id: 'supervisor',
+      accessorFn: (row) => row.supervisor?.namasupervisor || '-',
       header: 'Supervisor',
-      Cell: ({ row }) => (
-        <div className="text-sm">{row.original.namasupervisor || '-'}</div>
+      Cell: ({ cell }) => (
+        <div className="text-sm">{cell.getValue<string>()}</div>
       ),
     },
     {
-      accessorKey: 'approved',
-      header: 'Status',
+      accessorKey: 'confirmed',
+      header: 'Approved',
       Cell: ({ row }) => (
         <StatusBadge
-          approved={row.original.approved}
+          approved={row.original.confirmed}
           blocked={row.original.blocked}
         />
       ),
     },
   ];
 
-  const handleEdit = (item: SalesProfile) => {
+  const handleEdit = (item: UserProfile) => {
     setEditingItem(item);
     setFormData({
-      approved: item.approved,
+      confirmed: item.confirmed,
       blocked: item.blocked,
-      namasupervisor: item.namasupervisor || '',
+      supervisor_id: item.supervisor_id,
     });
     setIsEditDialogOpen(true);
   };
@@ -138,15 +132,21 @@ export default function UserManagementPage() {
     if (!editingItem) return;
 
     try {
-      await salesProfilesAPI.update(editingItem.id, {
-        approved: formData.approved,
+      await userProfilesAPI.update(editingItem.id, {
+        confirmed: formData.confirmed,
         blocked: formData.blocked,
-        namasupervisor: formData.namasupervisor,
+        supervisor_id: formData.supervisor_id,
       });
 
+      const updatedSupervisor = supervisors.find((s: any) => Number(s.id) === formData.supervisor_id);
+      
       setData(data.map(item =>
         item.id === editingItem.id
-          ? { ...item, ...formData }
+          ? { 
+              ...item, 
+              ...formData, 
+              supervisor: updatedSupervisor ? { namasupervisor: updatedSupervisor.namasupervisor } : undefined 
+            }
           : item
       ));
 
@@ -159,22 +159,38 @@ export default function UserManagementPage() {
     }
   };
 
+  const triggerForceReset = async () => {
+    if (!editingItem) return;
+    
+    if (!confirm(`Are you sure you want to force password reset for ${editingItem.full_name || editingItem.email}?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ force_password_reset: true })
+        .eq('id', editingItem.id);
+
+      if (error) throw error;
+      toast.success("User will be forced to reset password on next login.");
+      setIsEditDialogOpen(false);
+      setEditingItem(null);
+    } catch (error) {
+      console.error('Failed to force password reset:', error);
+      toast.error('Failed to force password reset');
+    }
+  };
+
   return (
     <ProtectedRoute>
       <DashboardLayout>
         <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Sales Profile Management</h1>
-            <p className="text-gray-600 mt-2">
-              Manage sales profiles - Only supervisor, approval status, and blocked status can be edited
-            </p>
-          </div>
-
           <CRUDTable
             data={data}
             columns={columns}
             title="Sales Profiles"
-            description="Sales profiles - Dashboard access management"
+            description="Manage sales profiles - Only supervisor, approval status, and blocked status can be edited"
             onEdit={handleEdit}
             searchPlaceholder="Search sales profiles..."
             addButtonText={null as any} // Disable add button - profiles register via frontend
@@ -193,7 +209,7 @@ export default function UserManagementPage() {
           >
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Edit Sales Profile - {editingItem?.surename}</DialogTitle>
+                <DialogTitle>Edit Sales Profile - {editingItem?.full_name || editingItem?.email}</DialogTitle>
                 <DialogDescription>
                   Only the following fields can be edited: Supervisor, Approved Status, and Blocked Status.
                 </DialogDescription>
@@ -202,73 +218,66 @@ export default function UserManagementPage() {
                 {/* Read-only fields */}
                 <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                   <div>
-                    <Label className="text-sm font-medium text-gray-600">Sales ID</Label>
-                    <p className="text-sm font-mono">{editingItem?.sales_uid}</p>
+                    <Label className="text-sm font-medium text-gray-600">Full Name</Label>
+                    <p className="text-sm font-mono">{editingItem?.full_name || '-'}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Email</Label>
-                    <p className="text-sm font-mono">{editingItem?.email}</p>
+                    <p className="text-sm font-mono">{editingItem?.email || '-'}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-600">Full Name</Label>
-                    <p className="text-sm">{editingItem?.surename}</p>
+                    <Label className="text-sm font-medium text-gray-600">Username</Label>
+                    <p className="text-sm font-mono">{editingItem?.username || '-'}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Phone Number</Label>
-                    <p className="text-sm">{editingItem?.phonenumber || '-'}</p>
+                    <p className="text-sm font-mono">{editingItem?.phone || '-'}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-600">WhatsApp</Label>
-                    <p className="text-sm">{editingItem?.wanumber || '-'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Address</Label>
-                    <p className="text-sm">{editingItem?.address || '-'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">City</Label>
-                    <p className="text-sm">{editingItem?.city || '-'}</p>
+                    <p className="text-sm font-mono">{editingItem?.whatsapp || '-'}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Created</Label>
                     <p className="text-sm">
-                      {editingItem?.createdAt ? new Date(editingItem.createdAt).toLocaleDateString() : '-'}
+                      {editingItem?.created_at ? new Date(editingItem.created_at).toLocaleDateString() : '-'}
                     </p>
                   </div>
                 </div>
 
                 {/* Editable fields */}
                 <div className="space-y-4 pt-4 border-t">
-                  <div className="space-y-2">
-                    <Label htmlFor="namasupervisor">Supervisor</Label>
-                    <Select
-                      value={formData.namasupervisor || '__none__'}
-                      onValueChange={(value) => setFormData({ ...formData, namasupervisor: value === '__none__' ? '' : value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select supervisor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">No Supervisor</SelectItem>
-                        {supervisors.map((supervisor) => (
-                          <SelectItem key={supervisor.id} value={supervisor.namasupervisor}>
-                            {supervisor.namasupervisor}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Supervisor</Label>
+                    <div className="mt-1">
+                      <Select
+                        value={formData.supervisor_id ? formData.supervisor_id.toString() : '__none__'}
+                        onValueChange={(value) => setFormData({ ...formData, supervisor_id: value === '__none__' ? null : Number(value) })}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select Supervisor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">No Supervisor</SelectItem>
+                          {supervisors.map((supervisor: any) => (
+                            <SelectItem key={supervisor.id} value={supervisor.id.toString()}>
+                              {supervisor.namasupervisor}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center space-x-2">
                       <Switch
-                        id="approved"
-                        checked={formData.approved}
+                        id="confirmed"
+                        checked={formData.confirmed}
                         onCheckedChange={(checked) =>
-                          setFormData({ ...formData, approved: checked })
+                          setFormData({ ...formData, confirmed: checked })
                         }
                       />
-                      <Label htmlFor="approved" className="text-sm font-medium">
+                      <Label htmlFor="confirmed" className="text-sm font-medium">
                         Approved
                       </Label>
                     </div>
@@ -288,19 +297,28 @@ export default function UserManagementPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end space-x-2 pt-4 border-t">
+                <div className="flex justify-between items-center pt-4 border-t">
                   <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsEditDialogOpen(false);
-                      setEditingItem(null);
-                    }}
+                    variant="destructive"
+                    onClick={triggerForceReset}
+                    type="button"
                   >
-                    Cancel
+                    Force Reset Password
                   </Button>
-                  <Button onClick={handleSave}>
-                    Update Sales Profile
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsEditDialogOpen(false);
+                        setEditingItem(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSave}>
+                      Save Changes
+                    </Button>
+                  </div>
                 </div>
               </div>
             </DialogContent>

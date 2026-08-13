@@ -48,6 +48,7 @@ const navigationGroups: { groupName: string, items: NavItem[] }[] = [
           { name: 'Colors', href: '/dashboard/master-data/colors', icon: Palette },
           { name: 'Supervisors', href: '/dashboard/master-data/supervisors', icon: User },
           { name: 'Branches', href: '/dashboard/master-data/branches', icon: MapPin },
+          { name: 'Stock', href: '/dashboard/master-data/stock', icon: Car },
           { name: 'Information', href: '/dashboard/master-data/information', icon: Info },
         ]
       },
@@ -82,14 +83,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const isActive = (href: string) => pathname === href;
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-astra-silver/30">
       {/* Sidebar */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+        "fixed inset-y-0 left-0 z-50 w-64 bg-astra-white/80 backdrop-blur-md border-r border-gray-200/50 shadow-soft transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 flex flex-col",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className="flex items-center justify-center h-16 px-4 bg-primary">
-          <h1 className="text-xl font-bold text-white">Car Dealer Dashboard</h1>
+        <div className="flex items-center justify-center h-20 px-4 border-b border-gray-200/50">
+          <h1 className="text-xl font-extrabold text-astra-charcoal tracking-tight text-center">
+            {import.meta.env.VITE_APP_NAME || 'ASTRA DAIHATSU'}
+          </h1>
         </div>
 
         <nav className="mt-8 flex-1 overflow-y-auto">
@@ -117,30 +120,30 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                             </div>
                             <div className="ml-4 space-y-1">
                               {item.children.map((child) => (
-                                <Link
-                                  key={child.name}
-                                  href={child.href}
-                                  className={cn(
-                                    "flex items-center px-2 py-2 text-sm rounded-md transition-colors",
-                                    isActive(child.href)
-                                      ? "bg-primary text-white"
-                                      : "text-gray-700 hover:bg-gray-100"
-                                  )}
-                                >
-                                  <child.icon className="mr-3 h-4 w-4" />
-                                  {child.name}
-                                </Link>
-                              ))}
+                                  <Link
+                                    key={child.name}
+                                    href={child.href || '#'}
+                                    className={cn(
+                                      "flex items-center px-2 py-2 text-sm rounded-xl transition-all duration-200",
+                                      isActive(child.href || '#')
+                                        ? "bg-astra-red text-white shadow-soft font-semibold"
+                                        : "text-gray-600 hover:bg-astra-red/10 hover:text-astra-red"
+                                    )}
+                                  >
+                                    <child.icon className="mr-3 h-4 w-4" />
+                                    {child.name}
+                                  </Link>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <Link
-                            href={item.href}
-                            className={cn(
-                              "flex items-center px-2 py-2 text-sm rounded-md transition-colors",
-                              isActive(item.href)
-                                ? "bg-primary text-white"
-                                : "text-gray-700 hover:bg-gray-100"
+                          ) : (
+                            <Link
+                              href={item.href || '#'}
+                              className={cn(
+                                "flex items-center px-2 py-2 text-sm rounded-xl transition-all duration-200",
+                                isActive(item.href || '#')
+                                ? "bg-astra-red text-white shadow-soft font-semibold"
+                                : "text-gray-600 hover:bg-astra-red/10 hover:text-astra-red"
                             )}
                           >
                             <item.icon className="mr-3 h-5 w-5" />
@@ -156,28 +159,44 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             ))}
           </div>
         </nav>
+
+        {/* Bottom fixed section */}
+        <div className="p-4 border-t border-gray-200/50">
+          <Link
+            href="/dashboard/settings"
+            className={cn(
+              "flex items-center px-2 py-2 text-sm rounded-xl transition-all duration-200",
+              isActive('/dashboard/settings') 
+                ? "bg-astra-red text-white shadow-soft font-semibold" 
+                : "text-gray-600 hover:bg-astra-red/10 hover:text-astra-red"
+            )}
+          >
+            <Settings className="mr-3 h-5 w-5" />
+            Settings
+          </Link>
+        </div>
       </div>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         {/* Header */}
-        <header className="bg-white shadow-sm">
-          <div className="flex items-center justify-between h-16 px-4">
+        <header className="bg-astra-white/80 backdrop-blur-md shadow-sm z-10">
+          <div className="flex items-center justify-between h-20 px-6">
             <Button
               variant="ghost"
               size="sm"
-              className="lg:hidden"
+              className="lg:hidden hover:bg-astra-silver/50"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-5 w-5 text-astra-charcoal" />
             </Button>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 ml-auto">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full border-2 border-astra-silver hover:border-astra-red transition-colors">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-astra-red text-white font-bold">
                         {user?.email?.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -201,16 +220,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Main content area */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-transparent p-6 md:p-8">
           {children}
         </main>
 
         {/* Footer */}
-        <footer className="bg-white border-t p-2">
+        <footer className="bg-astra-white/50 backdrop-blur-sm border-t border-gray-200/50 p-4">
           <div className="flex items-center justify-center">
-            <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white py-2 px-6 rounded-md shadow-md border border-gray-700">
-              <span className="font-bold text-sm tracking-wide">Karunia Apps @nababancloud.net 2025</span>
-              <span className="text-xs text-gray-400 uppercase tracking-widest font-semibold ml-3 pl-3 border-l border-gray-600">Trial Version 1.0.1</span>
+            <div className="bg-astra-charcoal text-white py-2 px-6 rounded-xl shadow-soft">
+              <span className="font-bold text-sm tracking-wide">
+                {import.meta.env.VITE_APP_NAME} {import.meta.env.VITE_APP_TRADE_MARK}
+              </span>
+              <span className="text-xs text-astra-silver uppercase tracking-widest font-semibold ml-3 pl-3 border-l border-gray-600">
+                {import.meta.env.VITE_APP_VERSION || '1.0.0'}
+              </span>
             </div>
           </div>
         </footer>
@@ -219,7 +242,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Sidebar overlay for mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
+          className="fixed inset-0 z-40 bg-astra-charcoal/40 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}

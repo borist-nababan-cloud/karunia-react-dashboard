@@ -25,6 +25,7 @@ import { Switch } from '@/components/ui/switch';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useSpkData } from '@/hooks/useSpkData';
+import supabase, { branchesAPI } from '@/services/api';
 import { toast } from 'sonner';
 import { MoreHorizontal, FileText, Download, Eye, CheckCircle, Clock, Edit3, FileDown, IdCard, Users, RefreshCw } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
@@ -61,15 +62,20 @@ interface SPK {
   ktpPaspor?: StrapiMedia | null;
   kartuKeluarga?: StrapiMedia | null;
   selfie?: StrapiMedia | null;
-  salesProfile: {
+  salesProfile?: {
     id: number;
-        surename: string;
+    surename: string;
     namasupervisor: string;
     email: string;
     phonenumber: string;
     city: string;
     address: string;
-  };
+  } | null;
+  branch?: {
+    id: number;
+    name: string;
+  } | null;
+  branch_id?: number | null;
   detailInfo?: {
     namaBpkbStnk: string;
     kotaStnkBpkb: string;
@@ -98,10 +104,29 @@ export default function SpkManagementPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state for edit
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    finish: boolean;
+    editable: boolean;
+    branch_id: number | null;
+  }>({
     finish: false,
     editable: false,
+    branch_id: null,
   });
+
+  const [branches, setBranches] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const res = await branchesAPI.findAll();
+        setBranches(res.data || []);
+      } catch (err) {
+        console.error('Failed to load branches', err);
+      }
+    };
+    fetchBranches();
+  }, []);
 
   // Track if component is mounted to prevent initial render updates
 
@@ -129,15 +154,23 @@ export default function SpkManagementPage() {
     sortOrder: 'desc',
   });
 
-  // Handle edit SPK
   const handleEditSpk = useCallback((spk: SPK) => {
     setEditingSpk(spk);
     setFormData({
       finish: spk.finish,
       editable: spk.editable,
+      branch_id: spk.branch_id || spk.branch?.id || null,
     });
     setIsEditModalOpen(true);
   }, []);
+
+  // Systematically intercept Radix UI freezing bug
+  useEffect(() => {
+    if (!isEditModalOpen) {
+      // Force remove pointer-events lock when dialog closes
+      document.body.style.pointerEvents = '';
+    }
+  }, [isEditModalOpen]);
 
   // Handle update SPK
   const handleUpdateSpk = async () => {
@@ -148,11 +181,11 @@ export default function SpkManagementPage() {
       const updateData = {
         finish: formData.finish,
         editable: formData.editable,
+        branch_id: formData.branch_id,
       };
 
       await updateSpk(editingSpk.id, updateData);
       setIsEditModalOpen(false);
-      setEditingSpk(null);
       // Refetch is automatic via React Query invalidation
     } finally {
       setIsSubmitting(false);
@@ -162,14 +195,20 @@ export default function SpkManagementPage() {
   // Close edit modal
   const closeEditModal = useCallback(() => {
     setIsEditModalOpen(false);
-    setEditingSpk(null);
   }, []);
 
-  // Handle form input changes
   const handleInputChange = useCallback((field: 'finish' | 'editable', value: boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value,
+    }));
+  }, []);
+
+  const handleBranchChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value ? parseInt(e.target.value, 10) : null;
+    setFormData(prev => ({
+      ...prev,
+      branch_id: value,
     }));
   }, []);
 
@@ -234,12 +273,18 @@ export default function SpkManagementPage() {
     }
 
     try {
-      // In Supabase, we assume media is either a public URL string or a JSON object with a URL
-      const mediaUrl = typeof media === 'string' ? media : media.url;
+      let mediaUrl = typeof media === 'string' ? media : media.url;
       
       if (!mediaUrl) throw new Error('No valid URL');
 
+      // If the URL is just a path (e.g. 'uploads/....jpg'), generate public URL from 'spk-documents' bucket
+      if (!mediaUrl.startsWith('http://') && !mediaUrl.startsWith('https://')) {
+        const { data } = supabase.storage.from('spk-documents').getPublicUrl(mediaUrl);
+        mediaUrl = data.publicUrl;
+      }
+
       const response = await fetch(mediaUrl);
+      if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
       const blob = await response.blob();
       
       const url = URL.createObjectURL(blob);
@@ -313,16 +358,22 @@ export default function SpkManagementPage() {
       Cell: ({ cell }) => cell.getValue<string>() || '-',
     },
     {
-      accessorKey: 'salesProfile.surename',
+      accessorFn: (row) => row.salesProfile?.surename || '-',
+      id: 'sales',
       header: 'Sales',
       size: 150,
-      Cell: ({ cell }) => cell.getValue<string>() || '-',
     },
     {
-      accessorKey: 'salesProfile.namasupervisor',
+      accessorFn: (row) => row.salesProfile?.namasupervisor || '-',
+      id: 'supervisor',
       header: 'Supervisor',
       size: 180,
-      Cell: ({ cell }) => cell.getValue<string>() || '-',
+    },
+    {
+      accessorFn: (row) => row.branch?.name || '-',
+      id: 'branch',
+      header: 'Branch',
+      size: 150,
     },
     {
       accessorKey: 'editable',
@@ -401,7 +452,7 @@ export default function SpkManagementPage() {
     renderRowActions: ({ row }) => {
       const spk = row.original;
       return (
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
               <span className="sr-only">Open menu</span>
@@ -534,7 +585,15 @@ export default function SpkManagementPage() {
           </Card>
 
           {/* Edit SPK Modal */}
-          <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <Dialog 
+            open={isEditModalOpen} 
+            onOpenChange={(open) => {
+              setIsEditModalOpen(open);
+              if (!open) {
+                setEditingSpk(null);
+              }
+            }}
+          >
             <DialogContent className="sm:max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Edit SPK Status</DialogTitle>
@@ -543,39 +602,55 @@ export default function SpkManagementPage() {
                 </DialogDescription>
               </DialogHeader>
 
-              {editingSpk && (
-                <div className="space-y-6">
-                  {/* Read-only fields */}
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>No SPK</Label>
-                      <Input value={editingSpk.noSPK} disabled />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Tanggal</Label>
-                      <Input value={new Date(editingSpk.tanggal).toLocaleDateString('id-ID')} disabled />
-                    </div>
+              <div className={`space-y-6 ${!editingSpk ? 'hidden' : ''}`}>
+                {/* Read-only fields */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>No SPK</Label>
+                    <Input value={editingSpk?.noSPK || ''} disabled />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Tanggal</Label>
+                    <Input value={editingSpk?.tanggal ? new Date(editingSpk.tanggal).toLocaleDateString('id-ID') : ''} disabled />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>No Telepon Customer</Label>
+                    <Input value={editingSpk?.noTeleponCustomer || ''} disabled />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email Customer</Label>
+                    <Input value={editingSpk?.emailcustomer || '-'} disabled />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Sales</Label>
+                    <Input value={editingSpk?.salesProfile?.surename || '-'} disabled />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Supervisor</Label>
+                    <Input value={editingSpk?.salesProfile?.namasupervisor || '-'} disabled />
+                  </div>
+                </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>No Telepon Customer</Label>
-                      <Input value={editingSpk.noTeleponCustomer} disabled />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Email Customer</Label>
-                      <Input value={editingSpk.emailcustomer || '-'} disabled />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Sales</Label>
-                      <Input value={editingSpk.salesProfile?.surename || '-'} disabled />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Supervisor</Label>
-                      <Input value={editingSpk.salesProfile?.namasupervisor || '-'} disabled />
+                      <Label htmlFor="branch">Branch (Assignment)</Label>
+                      <select
+                        id="branch"
+                        value={formData.branch_id || ''}
+                        onChange={handleBranchChange}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <option value="">-- No Branch Assigned --</option>
+                        {branches.map(b => (
+                          <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 
@@ -607,9 +682,8 @@ export default function SpkManagementPage() {
                         </Label>
                       </div>
                     </div>
-                  </div>
                 </div>
-              )}
+              </div>
 
               <DialogFooter>
                 <Button

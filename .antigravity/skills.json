@@ -1,0 +1,22 @@
+{
+  "module": "Admin Dashboard",
+  "framework": "React",
+  "access_control": "Supabase Auth",
+  "targets": [
+    "SalesApp",
+    "CRM",
+    "Website"
+  ],
+  "deployment": "Coolify (Traefik Proxy)",
+  "agent_role": "Frontend Specialist",
+  "capabilities": [
+    "React/Shadcn/MRT Development",
+    "State Management",
+    "UI Styling"
+  ]
+  // ,
+  // "restrictions": [
+  //   "Do not modify database migrations",
+  //   "Always ask for confirmation before changing DB schema"
+  // ]
+}

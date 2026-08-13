@@ -11,10 +11,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import Image from '@/components/NextImageCompat';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { login, error } = useAuth();
@@ -37,30 +39,28 @@ export default function LoginPage() {
 
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 flex flex-col items-center">
-          <div className="w-full flex justify-center mb-4">
-            <Image
-              src="/images/logo-login.jpg"
-              alt="Logo"
-              className="h-20 w-auto object-contain mx-auto"
-            />
+    <div className="min-h-screen flex flex-col items-center justify-center bg-astra-silver/50 px-4">
+      <Card className="w-full max-w-md shadow-soft border-0 rounded-2xl bg-white/90 backdrop-blur-md">
+        <CardHeader className="space-y-1 flex flex-col items-center pt-8">
+          <div className="w-full flex justify-center mb-6">
+            <h1 className="text-3xl font-extrabold text-astra-charcoal tracking-tight text-center">
+              {import.meta.env.VITE_APP_NAME || 'ASTRA DAIHATSU'}
+            </h1>
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Login</CardTitle>
-          <CardDescription className="text-center">
+          <CardTitle className="text-2xl font-bold text-center text-astra-charcoal">Login</CardTitle>
+          <CardDescription className="text-center text-gray-500">
             Enter your credentials to access the dashboard
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5 px-8">
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="border-astra-red/50 bg-astra-red/10 text-astra-red">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email or Username</Label>
+              <Label htmlFor="email" className="text-astra-charcoal font-medium">Email or Username</Label>
               <Input
                 id="email"
                 type="text"
@@ -69,25 +69,42 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
+                className="rounded-xl border-gray-300 focus:border-astra-red focus:ring-astra-red transition-colors p-3"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+              <Label htmlFor="password" className="text-astra-charcoal font-medium">Password</Label>
+              <div className="relative group">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="pr-12 rounded-xl transition-all duration-200 border-gray-300 group-hover:border-astra-red/50 focus:border-astra-red focus:ring-astra-red p-3"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-astra-red hover:bg-astra-red/10 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-astra-red focus:ring-offset-0"
+                  tabIndex={-1}
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
+          <CardFooter className="flex flex-col space-y-4 px-8 pb-8 pt-4">
             <Button
               type="submit"
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+              className="w-full bg-astra-red hover:bg-red-700 text-white font-semibold rounded-xl shadow-soft h-12 text-md transition-colors"
               disabled={isLoading}
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
@@ -97,9 +114,13 @@ export default function LoginPage() {
       </Card>
 
       <div className="mt-8 text-center">
-        <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white py-3 px-8 rounded-lg shadow-xl border border-gray-700">
-          <p className="font-bold text-lg tracking-wide">Karunia Apps @nababancloud.net 2025</p>
-          <p className="text-sm text-gray-400 mt-1 uppercase tracking-widest font-semibold">Trial Version 1.0.1</p>
+        <div className="bg-astra-charcoal text-white py-3 px-8 rounded-xl shadow-soft">
+          <span className="font-bold text-sm tracking-wide">
+            {import.meta.env.VITE_APP_NAME} {import.meta.env.VITE_APP_TRADE_MARK}
+          </span>
+          <span className="text-xs text-astra-silver uppercase tracking-widest font-semibold ml-3 pl-3 border-l border-gray-600">
+            {import.meta.env.VITE_APP_VERSION || '1.0.0'}
+          </span>
         </div>
       </div>
     </div>
