@@ -213,11 +213,9 @@ export default function GoogleMapsSelector({
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
       alert('Terjadi kesalahan pada sistem, silakan hubungi tim IT.');
-      setIsGettingLocation(false);
       return;
     }
 
-    setIsGettingLocation(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude: lat, longitude: lng } = position.coords;
@@ -227,12 +225,10 @@ export default function GoogleMapsSelector({
           map.setZoom(17);
           onLocationChange(lat, lng);
         }
-        setIsGettingLocation(false);
       },
       (error) => {
         console.error('Error getting location:', error);
         alert('Terjadi kesalahan pada sistem, silakan hubungi tim IT.');
-        setIsGettingLocation(false);
       },
       {
         enableHighAccuracy: true,
