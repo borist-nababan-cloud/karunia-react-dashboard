@@ -15,10 +15,12 @@ COPY . .
 # Build the application
 # Note: VITE_ env vars are baked in at build time.
 # In Coolify, these should be provided as build environment variables.
-ARG VITE_API_URL
-ARG VITE_STRAPI_URL
-ARG VITE_STRAPI_API_TOKEN
+ARG VITE_APP_NAME
+ARG VITE_APP_VERSION
+ARG VITE_APP_TRADE_MARK
 ARG VITE_GOOGLE_MAPS_API_KEY
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
 
 RUN npm run build
 
