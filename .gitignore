@@ -34,3 +34,4 @@ my-cred/
 database-docs/
 *.md
 !README.md
+.env*

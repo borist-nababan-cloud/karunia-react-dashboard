@@ -19,6 +19,8 @@ const SalesMonitoringPage = React.lazy(() => import('./pages/dashboard/sales-mon
 const SpkManagementPage = React.lazy(() => import('./pages/dashboard/spk-management/page'));
 const UserManagementPage = React.lazy(() => import('./pages/dashboard/user-management/page'));
 const StockPage = React.lazy(() => import('./pages/dashboard/master-data/stock/page'));
+const AttLogsPage = React.lazy(() => import('./pages/dashboard/master-data/attlogs/page'));
+const SalesTrackPage = React.lazy(() => import('./pages/dashboard/sales-track/page'));
 const SettingsPage = React.lazy(() => import('./pages/dashboard/settings/page'));
 
 // Loading component
@@ -48,9 +50,11 @@ function App() {
         <Route path="/dashboard/master-data/vehicle-groups" element={<VehicleGroupsPage />} />
         <Route path="/dashboard/master-data/vehicle-types" element={<VehicleTypesPage />} />
         <Route path="/dashboard/master-data/stock" element={<StockPage />} />
+        <Route path="/dashboard/master-data/attlogs" element={<AttLogsPage />} />
         <Route path="/dashboard/sales-monitoring" element={<SalesMonitoringPage />} />
         <Route path="/dashboard/spk-management" element={<SpkManagementPage />} />
         <Route path="/dashboard/user-management" element={<UserManagementPage />} />
+        <Route path="/dashboard/sales-track" element={<SalesTrackPage />} />
         <Route path="/dashboard/settings" element={<SettingsPage />} />
 
         {/* Catch all - redirect to dashboard or login */}

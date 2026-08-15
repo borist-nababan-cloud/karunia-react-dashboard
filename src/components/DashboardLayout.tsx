@@ -35,26 +35,25 @@ type NavItem = {
 
 const navigationGroups: { groupName: string, items: NavItem[] }[] = [
   {
-    groupName: 'Sales Support',
+    groupName: 'Master Data',
     items: [
-      { name: 'Dashboard', href: '/dashboard', icon: Home },
-      {
-        name: 'Master Data',
-        icon: Settings,
-        allowedRoles: [ROLES.ADMIN, ROLES.SUPER_USER],
-        children: [
-          { name: 'Vehicle Groups', href: '/dashboard/master-data/vehicle-groups', icon: Car },
-          { name: 'Vehicle Types', href: '/dashboard/master-data/vehicle-types', icon: Car },
-          { name: 'Colors', href: '/dashboard/master-data/colors', icon: Palette },
-          { name: 'Supervisors', href: '/dashboard/master-data/supervisors', icon: User },
-          { name: 'Branches', href: '/dashboard/master-data/branches', icon: MapPin },
-          { name: 'Stock', href: '/dashboard/master-data/stock', icon: Car },
-          { name: 'Information', href: '/dashboard/master-data/information', icon: Info },
-        ]
-      },
+      { name: 'Vehicle Groups', href: '/dashboard/master-data/vehicle-groups', icon: Car, allowedRoles: [ROLES.ADMIN, ROLES.SUPER_USER] },
+      { name: 'Vehicle Types', href: '/dashboard/master-data/vehicle-types', icon: Car, allowedRoles: [ROLES.ADMIN, ROLES.SUPER_USER] },
+      { name: 'Colors', href: '/dashboard/master-data/colors', icon: Palette, allowedRoles: [ROLES.ADMIN, ROLES.SUPER_USER] },
+      { name: 'Branches', href: '/dashboard/master-data/branches', icon: MapPin, allowedRoles: [ROLES.ADMIN, ROLES.SUPER_USER] },
+      { name: 'Supervisors', href: '/dashboard/master-data/supervisors', icon: User, allowedRoles: [ROLES.ADMIN, ROLES.SUPER_USER] },
+      { name: 'Stock', href: '/dashboard/master-data/stock', icon: Car, allowedRoles: [ROLES.ADMIN, ROLES.SUPER_USER] },
+      { name: 'Information', href: '/dashboard/master-data/information', icon: Info, allowedRoles: [ROLES.ADMIN, ROLES.SUPER_USER] },
+    ]
+  },
+  {
+    groupName: 'Showroom',
+    items: [
       { name: 'User Management', href: '/dashboard/user-management', icon: UserCheck, allowedRoles: [ROLES.ADMIN, ROLES.SUPER_USER] },
       { name: 'Sales Monitoring', href: '/dashboard/sales-monitoring', icon: MapIcon },
       { name: 'SPK Management', href: '/dashboard/spk-management', icon: FileText },
+      { name: 'Att Logs', href: '/dashboard/master-data/attlogs', icon: MapPin, allowedRoles: [ROLES.ADMIN, ROLES.SUPER_USER] },
+      { name: 'Sales Track', href: '/dashboard/sales-track', icon: MapIcon, allowedRoles: [ROLES.ADMIN, ROLES.SUPER_USER] },
     ]
   },
   {

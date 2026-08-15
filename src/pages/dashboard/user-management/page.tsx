@@ -162,18 +162,19 @@ export default function UserManagementPage() {
   const triggerForceReset = async () => {
     if (!editingItem) return;
     
-    if (!confirm(`Are you sure you want to force password reset for ${editingItem.full_name || editingItem.email}?`)) {
+    if (!confirm(`Are you sure you want to force password reset for ${editingItem.full_name || editingItem.email}? Their password will be temporarily set to 'ilovekarunia'.`)) {
       return;
     }
 
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ force_password_reset: true })
-        .eq('id', editingItem.id);
+      const { data, error } = await supabase.functions.invoke('admin-force-reset', {
+        body: { userId: editingItem.id }
+      });
 
       if (error) throw error;
-      toast.success("User will be forced to reset password on next login.");
+      if (data?.error) throw new Error(data.error);
+
+      toast.success("User password has been reset to 'ilovekarunia'. They will be forced to change it on next login.");
       setIsEditDialogOpen(false);
       setEditingItem(null);
     } catch (error) {
