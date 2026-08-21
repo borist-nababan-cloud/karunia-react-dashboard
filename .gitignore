@@ -35,3 +35,11 @@ database-docs/
 *.md
 !README.md
 .env*
+
+# Sensitive Data
+.env
+.env.*
+*.sql
+*.md
+!README.md
+docs/
