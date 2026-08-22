@@ -43,3 +43,7 @@ database-docs/
 *.md
 !README.md
 docs/
+.env
+*.sql
+*.md
+docs/
